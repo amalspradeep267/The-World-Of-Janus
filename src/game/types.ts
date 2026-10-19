@@ -42,7 +42,9 @@ export interface Envoy {
 export type NightPlan =
   | { kind: 'envoy'; to: NationId; paid: Partial<Hand> }
   | { kind: 'route'; with: NationId; good: Resource; paid: Partial<Hand> }
-  | { kind: 'spy'; nation: NationId; suspect: PlayerID; gold: number };
+  | { kind: 'spy'; nation: NationId; suspect: PlayerID; gold: number }
+  | { kind: 'smuggle'; good: Resource; gold: number }
+  | { kind: 'pump'; good: Resource; gold: number };
 
 export interface PlayerSecret {
   nation: NationId;
@@ -115,6 +117,8 @@ export interface GState {
   trades: Trade[];
   votes: Record<PlayerID, PlayerID | null>;
   ready: Record<PlayerID, boolean>;
+  /** Public card count per player (not which cards), so hoarding can be spotted. */
+  handSizes: Record<PlayerID, number>;
   revealed: Record<PlayerID, { nation: NationId; faction: Faction }>;
   verdicts: Verdict[];
   wrongExposures: number;

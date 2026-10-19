@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { BoardProps } from 'boardgame.io/react';
-import { FACTION_INFO, MAX_ROUNDS, RESOURCES, RESOURCE_INFO, TRIBUNAL_FROM_ROUND, type NationId } from '../game/constants';
+import { COST, FACTION_INFO, MAX_ROUNDS, MAX_ROUTES_PER_CITY, RECIPE, RESOURCES, RESOURCE_INFO, TRIBUNAL_FROM_ROUND, type NationId } from '../game/constants';
+import { routeCount } from '../game/game';
 import type { GState } from '../game/types';
-import { Avatar, Die, GoldCard, goodsEmoji, Modal, nationIcon, nationName, personaOf, ResCard } from './common';
+import { Avatar, Die, GoldCard, goodsEmoji, Modal, nationIcon, nationName, personaOf, Recipe, ResCard } from './common';
 import { HexMap } from './HexMap';
-import { IdentityModal, MarketModal, NewsArchive, PlayersModal, TradeModal, TribunalModal, Welcome } from './Modals';
+import { BlackMarketModal, IdentityModal, MarketModal, NewsArchive, PlayersModal, TradeModal, TribunalModal, Welcome } from './Modals';
 import { NationSheet } from './NationSheet';
 import { MorningPaper, VerdictOverlay } from './Paper';
+import { isMuted, play, setMuted } from './sound';
+import { isHost } from '../net/room';
 
-type Panel = null | 'trade' | 'market' | 'tribunal' | 'identity' | 'players' | 'news';
+type Panel = null | 'trade' | 'market' | 'black' | 'tribunal' | 'identity' | 'players' | 'news';
 
 function storageFlag(key: string): [boolean, () => void] {
   let v = false;
@@ -45,6 +48,41 @@ export function Board(props: BoardProps<GState>) {
   const [verdictSeen, setVerdictSeen] = useState(G.verdicts.length);
   const [revealQueue, setRevealQueue] = useState<NationId[]>([]);
   const knownRef = useRef<Set<string>>(new Set(Object.keys(me?.known ?? {})));
+  const [confirmQuit, setConfirmQuit] = useState(false);
+  const [muted, setMutedState] = useState(isMuted());
+
+  // ---- sound cues for significant moments only ----
+  const sfx = (s: Parameters<typeof play>[0]) => play(s, playerID);
+  const prev = useRef<{ phase: string; round: number; envoys: number; offers: number; log: number; plans: number; verdicts: number; over: boolean } | null>(null);
+  useEffect(() => {
+    if (!me) return;
+    const persona = G.roster.find((p) => p.id === playerID)?.persona ?? '';
+    const now = {
+      phase,
+      round: G.round,
+      envoys: G.envoys.filter((e) => e.to === me.nation && e.status === 'pending').length,
+      offers: G.trades.filter((t) => t.to === playerID && t.status === 'open').length,
+      log: G.publicLog.length,
+      plans: me.plans.length,
+      verdicts: G.verdicts.length,
+      over: !!G.result,
+    };
+    const was = prev.current;
+    prev.current = now;
+    if (!was) return; // no sounds for the state we loaded into
+    if (now.over && !was.over) return sfx(G.result!.winners.includes(me.faction) ? 'win' : 'lose');
+    if (now.phase === 'night' && was.phase !== 'night') sfx('night');
+    if (now.phase === 'day' && now.round > was.round) {
+      sfx('dice');
+      setTimeout(() => sfx('paper'), 450);
+    }
+    if (now.verdicts > was.verdicts) sfx('gavel');
+    if (now.envoys > was.envoys) sfx('envoy');
+    if (now.offers > was.offers) sfx('offer');
+    if (now.plans > was.plans) sfx('order');
+    // A trade or sale you were part of just went through.
+    if (now.log > was.log && G.publicLog.slice(was.log).some((l) => l.text.includes(persona) && !l.text.startsWith('⚖️'))) sfx('coin');
+  });
 
   useEffect(() => {
     if (!me) return;
@@ -52,6 +90,7 @@ export function Board(props: BoardProps<GState>) {
     if (fresh.length) {
       fresh.forEach((n) => knownRef.current.add(n));
       setRevealQueue((q) => [...q, ...(fresh as NationId[])]);
+      if (prev.current) play('reveal', playerID);
     }
   }, [me?.known]);
 
@@ -71,6 +110,7 @@ export function Board(props: BoardProps<GState>) {
   const tools: { id: Panel; icon: string; label: string; show: boolean; disabled?: boolean; badge?: number; title?: string }[] = [
     { id: 'trade', icon: '🔁', label: 'Trade', show: phase === 'day' },
     { id: 'market', icon: '💰', label: 'Market', show: phase === 'day' },
+    { id: 'black', icon: '🕶️', label: 'Black mkt', show: phase === 'night' },
     {
       id: 'tribunal',
       icon: '⚖️',
@@ -109,11 +149,30 @@ export function Board(props: BoardProps<GState>) {
         {!isConnected && <span className="small" style={{ color: 'var(--bad)' }}>⚠ Reconnecting…</span>}
         <div className="avatars">
           {G.roster.map((p) => (
-            <Avatar key={p.id} persona={p.persona} ready={!!G.ready[p.id]} title={`${p.persona} (${p.name})${G.ready[p.id] ? ': ready' : ''}`} />
+            <Avatar
+              key={p.id}
+              persona={p.persona}
+              ready={!!G.ready[p.id]}
+              cards={G.handSizes[p.id]}
+              title={`${p.persona} (${p.name}) · ${G.handSizes[p.id] ?? 0} cards${G.ready[p.id] ? ' · ready' : ''}`}
+            />
           ))}
         </div>
         <button className={`ready-btn big ${ready ? '' : 'primary'}`} onClick={() => moves.setReady(!ready)}>
           {ready ? '⏳ Waiting… (undo)' : phase === 'day' ? 'Ready for night 🌙' : 'Ready for morning ☀️'}
+        </button>
+        <button
+          className="ghost icon-btn"
+          title={muted ? 'Sound off' : 'Sound on'}
+          onClick={() => {
+            setMuted(!muted);
+            setMutedState(!muted);
+          }}
+        >
+          {muted ? '🔇' : '🔊'}
+        </button>
+        <button className="ghost icon-btn" title="Quit to the home screen" onClick={() => setConfirmQuit(true)}>
+          🚪
         </button>
       </header>
 
@@ -134,16 +193,20 @@ export function Board(props: BoardProps<GState>) {
         )}
 
         <div className="toasts" onClick={(e) => e.stopPropagation()}>
-          {incomingEnvoys.map((e) => (
+          {incomingEnvoys.map((e) => {
+            const full = routeCount(G, me.nation) >= MAX_ROUTES_PER_CITY || routeCount(G, e.from) >= MAX_ROUTES_PER_CITY;
+            return (
             <div key={e.id} className="toast">
               <span className="ti">{nationIcon(G, e.from)}✉️</span>
               <span className="tt">
-                <b>{nationName(G, e.from)}</b> sent your city an envoy. Accept to connect and learn who sent it.
+                <b>{nationName(G, e.from)}</b> sent your city an envoy.{' '}
+                {full ? `One of you already has ${MAX_ROUTES_PER_CITY} connections, so you can only refuse.` : 'Accept to connect and learn who sent it.'}
               </span>
-              <button className="good tiny" onClick={() => moves.respondEnvoy(e.id, true)}>Accept</button>
+              <button className="good tiny" disabled={full} onClick={() => moves.respondEnvoy(e.id, true)}>Accept</button>
               <button className="bad tiny" onClick={() => moves.respondEnvoy(e.id, false)}>Refuse</button>
             </div>
-          ))}
+            );
+          })}
           {incomingTrades.map((t) => (
             <div key={t.id} className="toast">
               <Avatar persona={personaOf(G, t.from).persona} />
@@ -197,6 +260,11 @@ export function Board(props: BoardProps<GState>) {
           {RESOURCES.every((r) => me.hand[r] === 0) && <span className="hand-empty">No cards in hand.</span>}
         </div>
         <GoldCard gold={me.gold} />
+        <div className="recipes" title="What night actions cost">
+          <span>✉️ Envoy <Recipe recipe={RECIPE.envoy} hand={me.hand} /></span>
+          <span>🤝 Trade <Recipe recipe={RECIPE.route} hand={me.hand} /></span>
+          <span>🕵️ Spies <span className="cost">🪙{COST.spyGold}</span></span>
+        </div>
         <div className="orders">
           {phase === 'night' && me.plans.length === 0 && <span className="small muted">No orders tonight yet</span>}
           {me.plans.map((p, i) => (
@@ -204,6 +272,8 @@ export function Board(props: BoardProps<GState>) {
               {p.kind === 'envoy' && <>✉️ Envoy ➜ {nationIcon(G, p.to)}</>}
               {p.kind === 'route' && <>🤝 {RESOURCE_INFO[p.good].emoji} trade ➜ {nationIcon(G, p.with)}</>}
               {p.kind === 'spy' && <>🕵️ {nationIcon(G, p.nation)} = <Avatar persona={personaOf(G, p.suspect).persona} size={20} />?</>}
+              {p.kind === 'smuggle' && <>🕶️ Smuggle {RESOURCE_INFO[p.good].emoji}</>}
+              {p.kind === 'pump' && <>🕶️ Pump {RESOURCE_INFO[p.good].emoji} ▲</>}
               <button className="tiny ghost" onClick={() => moves.cancelPlan(i)} title="Cancel and get your cards back">✕</button>
             </span>
           ))}
@@ -212,6 +282,7 @@ export function Board(props: BoardProps<GState>) {
 
       {panel === 'trade' && <TradeModal G={G} me={me} playerID={playerID!} moves={moves} onClose={() => setPanel(null)} />}
       {panel === 'market' && <MarketModal G={G} me={me} moves={moves} onClose={() => setPanel(null)} />}
+      {panel === 'black' && <BlackMarketModal G={G} me={me} moves={moves} onClose={() => setPanel(null)} />}
       {panel === 'tribunal' && <TribunalModal G={G} playerID={playerID!} moves={moves} onClose={() => setPanel(null)} />}
       {panel === 'identity' && <IdentityModal G={G} me={me} onClose={() => setPanel(null)} />}
       {panel === 'players' && <PlayersModal G={G} onClose={() => setPanel(null)} />}
@@ -269,6 +340,21 @@ export function Board(props: BoardProps<GState>) {
         </Modal>
       )}
       {G.result && <Result G={G} playerID={playerID!} />}
+      {confirmQuit && (
+        <Modal icon="🚪" title="Leave the game?" onClose={() => setConfirmQuit(false)}>
+          <p>
+            {matchID === 'practice'
+              ? 'This practice game will be lost.'
+              : isHost(matchID)
+                ? "You're the host. Leaving ends the game for everyone."
+                : 'You can rejoin any time with the same invite link, as long as the host keeps the game open.'}
+          </p>
+          <div className="row" style={{ justifyContent: 'flex-end', marginTop: 12 }}>
+            <button onClick={() => setConfirmQuit(false)}>Stay</button>
+            <button className="bad" onClick={() => (location.hash = '#/')}>Quit to home</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

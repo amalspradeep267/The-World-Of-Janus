@@ -8,15 +8,20 @@ import {
   FACTION_INFO,
   HARVEST_ROLLS,
   MAP_RADIUS,
+  MAX_GOODS_PER_ROUTE,
   MAX_PLAYERS,
+  MAX_ROUTES_PER_CITY,
   MAX_ROUNDS,
   MIN_PLAYERS,
   PERSONAS,
   PRICE_CAP_PCT,
   PRICE_STEP_PCT,
+  PUMP,
+  RECIPE,
   RESOURCES,
   RESOURCE_INFO,
   SETUP_TABLE,
+  SMUGGLE_MARKUP,
   START_EACH,
   START_GOLD,
   START_PRICE,
@@ -53,15 +58,10 @@ const persona = (G: GState, pid: PlayerID) => {
   return `${e.persona} (${e.name})`;
 };
 
-/** A payment must be exactly `cost` cards of valid resources that the player holds. */
-function isValidPayment(hand: Hand, paid: Partial<Hand>, cost: number): boolean {
-  if (!paid || typeof paid !== 'object') return false;
-  for (const [k, v] of Object.entries(paid)) {
-    if (!RESOURCES.includes(k as Resource) || !Number.isInteger(v) || (v as number) < 0) return false;
-    if ((v as number) > hand[k as Resource]) return false;
-  }
-  return handTotal(paid) === cost;
-}
+export const routeCount = (G: GState, n: NationId) => G.routes.filter((rt) => rt.a === n || rt.b === n).length;
+
+/** Price of one card on the black market. */
+export const smugglePrice = (G: GState, r: Resource) => Math.ceil(G.prices[r] * SMUGGLE_MARKUP);
 
 function isValidGoods(paid: Partial<Hand>): boolean {
   if (!paid || typeof paid !== 'object') return false;
@@ -71,7 +71,12 @@ function isValidGoods(paid: Partial<Hand>): boolean {
   return handTotal(paid) > 0;
 }
 
-const hasGoods = (hand: Hand, goods: Partial<Hand>) => RESOURCES.every((r) => hand[r] >= (goods[r] ?? 0));
+export const hasGoods = (hand: Hand, goods: Partial<Hand>) => RESOURCES.every((r) => hand[r] >= (goods[r] ?? 0));
+
+/** Public card counts are refreshed at dawn and after public trades/sales, never mid-night. */
+function snapshotHands(G: GState) {
+  for (const pid of Object.keys(G.players)) G.handSizes[pid] = handTotal(G.players[pid].hand);
+}
 
 function moveGoods(from: Hand, to: Hand | null, goods: Partial<Hand>) {
   for (const r of RESOURCES) {
@@ -147,6 +152,7 @@ function startDay({ G, random }: { G: GState; random: Rng & { D6(): number } }) 
     const routePart = handTotal(b) > 0 ? ` Trade routes brought in ${formatGoods(b)}.` : '';
     p.inbox.push({ round: G.round, text: `Harvest: ${formatGoods(g)}.${routePart}` });
   }
+  snapshotHands(G);
 }
 
 function endDay({ G }: { G: GState }) {
@@ -193,7 +199,7 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
     const p = G.players[pid];
     for (const plan of p.plans) {
       if (plan.kind === 'envoy') {
-        if (findRoute(G, p.nation, plan.to) || pendingBetween(G, p.nation, plan.to)) {
+        if (findRoute(G, p.nation, plan.to) || pendingBetween(G, p.nation, plan.to) || routeCount(G, p.nation) >= MAX_ROUTES_PER_CITY) {
           refund(p, plan.paid);
           p.inbox.push({ round: G.round, text: `Your envoy to ${icon(G, plan.to)} was recalled (already in contact). Refunded.` });
           continue;
@@ -202,13 +208,20 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
         items.push({ t: 'envoy', from: p.nation, to: plan.to });
       } else if (plan.kind === 'route') {
         const rt = findRoute(G, p.nation, plan.with);
-        if (!rt || rt.goods.includes(plan.good)) {
+        if (!rt || rt.goods.includes(plan.good) || rt.goods.length >= MAX_GOODS_PER_ROUTE) {
           refund(p, plan.paid);
           p.inbox.push({ round: G.round, text: `Trade with ${icon(G, plan.with)} could not open. Refunded.` });
           continue;
         }
         rt.goods.push(plan.good);
         items.push({ t: 'route', a: rt.a, b: rt.b, good: plan.good });
+      } else if (plan.kind === 'smuggle') {
+        p.hand[plan.good] += 1;
+        addDemand(G, plan.good, 1);
+        p.inbox.push({ round: G.round, text: `🕶️ Smugglers delivered 1 ${RESOURCE_INFO[plan.good].emoji} ${RESOURCE_INFO[plan.good].label}.` });
+      } else if (plan.kind === 'pump') {
+        addDemand(G, plan.good, PUMP.units);
+        p.inbox.push({ round: G.round, text: `🕶️ Your agents bid up ${RESOURCE_INFO[plan.good].emoji} ${RESOURCE_INFO[plan.good].label}.` });
       } else {
         const truth = G.owners[plan.nation] === plan.suspect;
         p.inbox.push({
@@ -228,24 +241,24 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
   for (const n of random.Shuffle(bots)) {
     for (const e of G.envoys) {
       if (e.to === n && e.status === 'pending' && e.sentRound < G.round) {
-        e.status = random.Number() < BOT.acceptChance ? 'accepted' : 'declined';
+        const room = routeCount(G, e.from) < MAX_ROUTES_PER_CITY && routeCount(G, n) < MAX_ROUTES_PER_CITY;
+        e.status = room && random.Number() < BOT.acceptChance ? 'accepted' : 'declined';
         e.resolvedRound = G.round;
         if (e.status === 'accepted') G.routes.push({ a: e.from, b: e.to, goods: [] });
       }
     }
-    const res = G.nations[n]!.resources;
-    if (random.Number() < BOT.envoyChance) {
+    if (routeCount(G, n) < MAX_ROUTES_PER_CITY && random.Number() < BOT.envoyChance) {
       const targets = G.nationOrder.filter((m) => m !== n && !findRoute(G, n, m) && !pendingBetween(G, n, m));
       if (targets.length) {
         const to = random.Shuffle(targets)[0];
         G.envoys.push({ id: G.nextId++, from: n, to, sentRound: G.round, status: 'pending' });
         items.push({ t: 'envoy', from: n, to });
-        for (let k = 0; k < COST.envoy; k++) addDemand(G, random.Shuffle([...res])[0], 1);
+        for (const [r, q] of Object.entries(RECIPE.envoy)) addDemand(G, r as Resource, q!);
       }
     }
     if (random.Number() < BOT.routeChance) {
       const options = G.routes
-        .filter((rt) => rt.a === n || rt.b === n)
+        .filter((rt) => (rt.a === n || rt.b === n) && rt.goods.length < MAX_GOODS_PER_ROUTE)
         .flatMap((rt) => {
           const all = new Set([...G.nations[rt.a]!.resources, ...G.nations[rt.b]!.resources]);
           return [...all].filter((good) => !rt.goods.includes(good)).map((good) => ({ rt, good }));
@@ -254,7 +267,7 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
         const { rt, good } = random.Shuffle(options)[0];
         rt.goods.push(good);
         items.push({ t: 'route', a: rt.a, b: rt.b, good });
-        for (let k = 0; k < COST.route; k++) addDemand(G, random.Shuffle([...res])[0], 1);
+        for (const [r, q] of Object.entries(RECIPE.route)) addDemand(G, r as Resource, q!);
       }
     }
   }
@@ -318,6 +331,7 @@ const respondEnvoy = hostOnly(({ G, playerID }, id: number, accept: boolean) => 
   const p = me(G, playerID);
   const e = G.envoys.find((x) => x.id === id);
   if (!p || !e || e.to !== p.nation || e.status !== 'pending') return INVALID_MOVE;
+  if (accept && (routeCount(G, e.from) >= MAX_ROUTES_PER_CITY || routeCount(G, e.to) >= MAX_ROUTES_PER_CITY)) return INVALID_MOVE;
   e.status = accept ? 'accepted' : 'declined';
   e.resolvedRound = G.round;
   if (!accept) return;
@@ -354,6 +368,7 @@ const respondTrade = hostOnly(({ G, playerID }, id: number, accept: boolean) => 
   moveGoods(from.hand, to.hand, t.give);
   moveGoods(to.hand, from.hand, t.get);
   t.status = 'accepted';
+  snapshotHands(G);
   G.publicLog.push({
     round: G.round,
     text: `🔁 ${persona(G, t.from)} traded ${formatGoods(t.give)} to ${persona(G, t.to)} for ${formatGoods(t.get)}.`,
@@ -375,6 +390,7 @@ const sell = hostOnly(({ G, playerID }, resource: Resource, qty: number) => {
   const earned = Math.floor(G.prices[resource] * qty);
   p.gold += earned;
   addDemand(G, resource, -qty);
+  snapshotHands(G);
   G.publicLog.push({
     round: G.round,
     text: `💰 ${persona(G, playerID!)} sold ${qty} ${RESOURCE_INFO[resource].emoji} ${RESOURCE_INFO[resource].label} for ${earned} gold.`,
@@ -387,24 +403,30 @@ const vote = hostOnly(({ G, playerID }, target: PlayerID | null) => {
   G.votes[playerID] = target;
 });
 
-const planEnvoy = hostOnly(({ G, playerID }, to: NationId, paid: Partial<Hand>) => {
+const planEnvoy = hostOnly(({ G, playerID }, to: NationId) => {
   const p = me(G, playerID);
   if (!p || !G.nations[to] || to === p.nation) return INVALID_MOVE;
   if (findRoute(G, p.nation, to) || pendingBetween(G, p.nation, to)) return INVALID_MOVE;
   if (p.plans.some((x) => x.kind === 'envoy' && x.to === to)) return INVALID_MOVE;
-  if (!isValidPayment(p.hand, paid, COST.envoy)) return INVALID_MOVE;
+  const planned = p.plans.filter((x) => x.kind === 'envoy').length;
+  if (routeCount(G, p.nation) + planned >= MAX_ROUTES_PER_CITY) return INVALID_MOVE;
+  const paid = { ...RECIPE.envoy };
+  if (!hasGoods(p.hand, paid)) return INVALID_MOVE;
   moveGoods(p.hand, null, paid);
   p.plans.push({ kind: 'envoy', to, paid });
 });
 
-const planRoute = hostOnly(({ G, playerID }, partner: NationId, good: Resource, paid: Partial<Hand>) => {
+const planRoute = hostOnly(({ G, playerID }, partner: NationId, good: Resource) => {
   const p = me(G, playerID);
   if (!p || !G.nations[partner]) return INVALID_MOVE;
   const rt = findRoute(G, p.nation, partner);
   if (!rt || rt.goods.includes(good)) return INVALID_MOVE;
   if (![...G.nations[p.nation]!.resources, ...G.nations[partner]!.resources].includes(good)) return INVALID_MOVE;
   if (p.plans.some((x) => x.kind === 'route' && x.with === partner && x.good === good)) return INVALID_MOVE;
-  if (!isValidPayment(p.hand, paid, COST.route)) return INVALID_MOVE;
+  const planned = p.plans.filter((x) => x.kind === 'route' && x.with === partner).length;
+  if (rt.goods.length + planned >= MAX_GOODS_PER_ROUTE) return INVALID_MOVE;
+  const paid = { ...RECIPE.route };
+  if (!hasGoods(p.hand, paid)) return INVALID_MOVE;
   moveGoods(p.hand, null, paid);
   p.plans.push({ kind: 'route', with: partner, good, paid });
 });
@@ -419,11 +441,27 @@ const planSpy = hostOnly(({ G, playerID }, nation: NationId, suspect: PlayerID) 
   p.plans.push({ kind: 'spy', nation, suspect, gold: COST.spyGold });
 });
 
+const planSmuggle = hostOnly(({ G, playerID }, good: Resource) => {
+  const p = me(G, playerID);
+  if (!p || !RESOURCES.includes(good)) return INVALID_MOVE;
+  const gold = smugglePrice(G, good);
+  if (p.gold < gold) return INVALID_MOVE;
+  p.gold -= gold;
+  p.plans.push({ kind: 'smuggle', good, gold });
+});
+
+const planPump = hostOnly(({ G, playerID }, good: Resource) => {
+  const p = me(G, playerID);
+  if (!p || !RESOURCES.includes(good) || p.gold < PUMP.gold) return INVALID_MOVE;
+  p.gold -= PUMP.gold;
+  p.plans.push({ kind: 'pump', good, gold: PUMP.gold });
+});
+
 const cancelPlan = hostOnly(({ G, playerID }, index: number) => {
   const p = me(G, playerID);
   const plan = p?.plans[index];
   if (!p || !plan) return INVALID_MOVE;
-  if (plan.kind === 'spy') p.gold += plan.gold;
+  if ('gold' in plan) p.gold += plan.gold;
   else refund(p, plan.paid);
   p.plans.splice(index, 1);
 });
@@ -525,6 +563,7 @@ export function makeGame(names: string[]): Game<GState> {
         trades: [],
         votes: {},
         ready: {},
+        handSizes: Object.fromEntries(ids.map((id) => [id, handTotal(players[id].hand)])),
         revealed: {},
         verdicts: [],
         wrongExposures: 0,
@@ -551,7 +590,7 @@ export function makeGame(names: string[]): Game<GState> {
         onEnd: resolveNight as any,
         endIf: allReady,
         turn: { activePlayers: ActivePlayers.ALL },
-        moves: { setReady, respondEnvoy, planEnvoy, planRoute, planSpy, cancelPlan },
+        moves: { setReady, respondEnvoy, planEnvoy, planRoute, planSpy, planSmuggle, planPump, cancelPlan },
       },
     },
 

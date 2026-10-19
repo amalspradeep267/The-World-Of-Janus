@@ -84,11 +84,27 @@ export const DICE_YIELD = 2;
 export const BASE_INCOME = 1;
 
 export const START_EACH = 2;
-export const START_GOLD = 2;
+export const START_GOLD = 5;
 export const START_PRICE = 3;
 
-/** Night action costs. Envoys and routes are paid in resources of the player's choice. */
-export const COST = { envoy: 2, route: 3, spyGold: 4 };
+/**
+ * Night action recipes. Each city produces only 3 of the 7 resources, so most
+ * players must trade by day (publicly) or smuggle at night (expensively) to act.
+ */
+export const RECIPE: Record<'envoy' | 'route', Partial<Record<Resource, number>>> = {
+  envoy: { grain: 1, wool: 1 },
+  route: { timber: 1, stone: 1 },
+};
+export const COST = { spyGold: 4 };
+
+/** Black market (night): buy a card at the market price times this markup, rounded up. */
+export const SMUGGLE_MARKUP = 1.5;
+/** Black market (night): pay this much gold to fake this many units of demand for a resource. */
+export const PUMP = { gold: 2, units: 3 };
+
+/** Trade route limits. */
+export const MAX_GOODS_PER_ROUTE = 2;
+export const MAX_ROUTES_PER_CITY = 3;
 
 /** Bot behaviour per night. */
 export const BOT = { envoyChance: 0.45, routeChance: 0.35, acceptChance: 0.6 };

@@ -7,6 +7,7 @@ import { MAX_PLAYERS, MIN_PLAYERS } from './game/constants';
 import { makeGame } from './game/game';
 import { getCredentials, getSeat, isHost, markHost, newRoomCode, parseHash, roomHash, roomLink, setSeat, type Route } from './net/room';
 import { Board } from './ui/Board';
+import { setAudibleSeat } from './ui/sound';
 
 export function App() {
   const [route, setRoute] = useState<Route>(() => parseHash(location.hash));
@@ -191,6 +192,11 @@ function Room({ code, roster }: { code: string; roster: string[] }) {
 function Practice({ players }: { players: number }) {
   const n = Math.min(MAX_PLAYERS, Math.max(MIN_PLAYERS, players));
   const [active, setActive] = useState('0');
+  // Every practice seat is mounted at once; only the one on screen plays sounds.
+  useEffect(() => {
+    setAudibleSeat(active);
+    return () => setAudibleSeat(null);
+  }, [active]);
   const GameClient = useMemo(
     () =>
       Client({

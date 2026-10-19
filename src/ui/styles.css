@@ -94,8 +94,14 @@ select, input { font: inherit; color: var(--text); background: var(--panel-2); b
   background: var(--good); color: #062; font: 700 11px/16px var(--sans); text-align: center; border: 2px solid var(--bg);
 }
 .avatar.waiting { opacity: 0.55; }
+.avatar .cards {
+  position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); white-space: nowrap;
+  background: #12141a; color: var(--text); border: 1px solid var(--line); border-radius: 999px; font: 600 10px/14px var(--sans); padding: 0 5px;
+}
+.topbar .avatars { padding-bottom: 10px; }
 
 .ready-btn { min-width: 150px; }
+.icon-btn { font-size: 18px; padding: 6px 8px; border-color: transparent; }
 
 /* ---------- stage (map area) ---------- */
 .stage { position: relative; min-height: 0; overflow: hidden; }
@@ -153,7 +159,11 @@ select, input { font: inherit; color: var(--text); background: var(--panel-2); b
 .action b { display: block; }
 .action span { font-size: 12px; color: var(--muted); }
 .action.chosen { border-color: var(--gold); background: #2e2a1c; }
-.cost { display: inline-flex; gap: 2px; margin-left: auto; font-size: 16px; }
+.cost { display: inline-flex; gap: 2px; margin-left: auto; font-size: 16px; white-space: nowrap; }
+.cost .lacking { opacity: 0.35; filter: grayscale(1); text-decoration: line-through; }
+.recipes { display: flex; flex-direction: column; gap: 4px; align-self: center; font-size: 12px; color: var(--muted); background: #ffffff0a; border-radius: 12px; padding: 8px 12px; }
+.recipes > span { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.recipes .cost { font-size: 15px; }
 
 /* ---------- hand ---------- */
 .handbar {

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { FACTION_INFO, MAX_ROUNDS, RESOURCES, RESOURCE_INFO, TRIBUNAL_FROM_ROUND, type NationId, type Resource } from '../game/constants';
-import { handTotal } from '../game/game';
+import { FACTION_INFO, MAX_ROUNDS, PUMP, RECIPE, RESOURCES, RESOURCE_INFO, TRIBUNAL_FROM_ROUND, type NationId, type Resource } from '../game/constants';
+import { handTotal, smugglePrice } from '../game/game';
 import type { GState, Hand, PlayerSecret } from '../game/types';
-import { Avatar, GoldCard, goodsEmoji, Modal, nationIcon, nationName, personaOf, ResCard, ResPill } from './common';
+import { Avatar, GoldCard, goodsEmoji, Modal, nationIcon, nationName, personaOf, Recipe, ResCard, ResPill } from './common';
 
 type Moves = Record<string, (...args: any[]) => void>;
 
@@ -89,7 +89,7 @@ const clean = (h: Partial<Hand>): Partial<Hand> =>
 export function MarketModal({ G, me, moves, onClose }: { G: GState; me: PlayerSecret; moves: Moves; onClose: () => void }) {
   return (
     <Modal icon="💰" title="Market" onClose={onClose}>
-      <p className="small muted">Sell cards for gold. Gold pays for spies. Sales are public.</p>
+      <p className="small muted">Sell cards for gold. Gold pays for spies and the black market. Sales are public, and selling right after a price spike looks suspicious.</p>
       <div className="row" style={{ margin: '6px 0 10px' }}>
         <GoldCard gold={me.gold} small />
       </div>
@@ -103,6 +103,41 @@ export function MarketModal({ G, me, moves, onClose }: { G: GState; me: PlayerSe
             <span className={ch ? (ch > 0 ? 'up' : 'down') : 'muted'}>{ch ? `${ch > 0 ? '▲' : '▼'} ${Math.abs(ch)}%` : '–'}</span>
             <button disabled={me.hand[r] < 1} onClick={() => moves.sell(r, 1)}>
               Sell 1 ({me.hand[r]})
+            </button>
+          </div>
+        );
+      })}
+    </Modal>
+  );
+}
+
+// ---------- Black market (night) ----------
+
+export function BlackMarketModal({ G, me, moves, onClose }: { G: GState; me: PlayerSecret; moves: Moves; onClose: () => void }) {
+  return (
+    <Modal icon="🕶️" title="Black market" onClose={onClose}>
+      <p className="small muted">
+        Secret and expensive. <b>Smuggle</b> a card you can't get by day without anyone seeing who bought it. <b>Pump</b> a price so you
+        can sell high tomorrow. The news shows the price jump, but not who caused it.
+      </p>
+      <div className="row" style={{ margin: '6px 0 10px' }}>
+        <GoldCard gold={me.gold} small />
+        <span className="small muted">
+          Recipes: ✉️ <Recipe recipe={RECIPE.envoy} hand={me.hand} /> · 🤝 <Recipe recipe={RECIPE.route} hand={me.hand} />
+        </span>
+      </div>
+      {RESOURCES.map((r) => {
+        const cost = smugglePrice(G, r);
+        return (
+          <div key={r} className="market-row" style={{ gridTemplateColumns: '40px 1fr 60px 120px 120px' }}>
+            <span className="em">{RESOURCE_INFO[r].emoji}</span>
+            <span>{RESOURCE_INFO[r].label}</span>
+            <span className="muted small">you: {me.hand[r]}</span>
+            <button disabled={me.gold < cost} onClick={() => moves.planSmuggle(r)} title="Delivered in the morning">
+              Smuggle 🪙{cost}
+            </button>
+            <button disabled={me.gold < PUMP.gold} onClick={() => moves.planPump(r)} title="Raises tomorrow's price">
+              Pump ▲ 🪙{PUMP.gold}
             </button>
           </div>
         );
@@ -215,6 +250,7 @@ export function PlayersModal({ G, onClose }: { G: GState; onClose: () => void })
               <Avatar persona={p.persona} size={44} />
               <b className="small">{p.persona}</b>
               <small>{p.name}</small>
+              <small>🃏 {G.handSizes[p.id] ?? 0} cards</small>
               {rev && (
                 <small>
                   {nationIcon(G, rev.nation)} {FACTION_INFO[rev.faction].label}
@@ -296,7 +332,8 @@ export function Welcome({ G, me, onClose }: { G: GState; me: PlayerSecret; onClo
           <div className="howto">
             <div><span className="hi">🎭</span><b>You rule a city</b><span>in secret. Your persona is public; your city isn't.</span></div>
             <div><span className="hi">☀️</span><b>Day</b><span>Talk on Discord. Trade cards openly. Accuse at the ⚖️ Tribunal.</span></div>
-            <div><span className="hi">🌙</span><b>Night</b><span>Click a city on the map to send envoys, open trade or spy.</span></div>
+            <div><span className="hi">🌙</span><b>Night</b><span>Click a city on the map to send envoys, open trade or spy. Each action needs specific cards.</span></div>
+            <div><span className="hi">🔁</span><b>Cover your tracks</b><span>Trade by day for what you need, or smuggle it at night. Everyone can see public trades.</span></div>
             <div><span className="hi">📰</span><b>Morning news</b><span>shows what each city did, but never who did it.</span></div>
           </div>
           <p className="small muted" style={{ textAlign: 'center' }}>

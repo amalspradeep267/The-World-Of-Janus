@@ -8,7 +8,7 @@ const AVATAR_COLORS = ['#e3b04b', '#7fc4e8', '#e88f7f', '#9fd18b', '#c79be6', '#
 
 export const personaOf = (G: GState, id: string) => G.roster.find((p) => p.id === id)!;
 
-export function Avatar({ persona, size = 34, ready, title }: { persona: string; size?: number; ready?: boolean; title?: string }) {
+export function Avatar({ persona, size = 34, ready, title, cards }: { persona: string; size?: number; ready?: boolean; title?: string; cards?: number }) {
   const i = Math.max(0, PERSONAS.indexOf(persona));
   const initials = persona
     .split(' ')
@@ -24,6 +24,7 @@ export function Avatar({ persona, size = 34, ready, title }: { persona: string; 
     >
       {initials}
       {ready && <span className="tick">✓</span>}
+      {cards !== undefined && <span className="cards" title="Cards in hand (updated at dawn and after public deals)">🃏{cards}</span>}
     </span>
   );
 }
@@ -86,17 +87,23 @@ export function ResPill({ res }: { res: Resource }) {
 export const goodsEmoji = (h: Partial<Hand>) =>
   RESOURCES.flatMap((r) => Array(h[r] ?? 0).fill(RESOURCE_INFO[r].emoji)).join('');
 
-/** Default payment: spend whatever you hold the most of. */
-export function autoPay(hand: Hand, cost: number): Partial<Hand> | null {
-  const left = { ...hand };
-  const paid: Partial<Hand> = {};
-  for (let k = 0; k < cost; k++) {
-    const r = [...RESOURCES].sort((a, b) => left[b] - left[a])[0];
-    if (left[r] === 0) return null;
-    left[r]--;
-    paid[r] = (paid[r] ?? 0) + 1;
-  }
-  return paid;
+/** Ingredients of a recipe the hand doesn't have enough of. */
+export const missingFor = (hand: Hand, recipe: Partial<Hand>) =>
+  (Object.keys(recipe) as Resource[]).filter((r) => hand[r] < (recipe[r] ?? 0));
+
+/** A recipe as ingredient icons; ones you're missing are crossed out. */
+export function Recipe({ recipe, hand }: { recipe: Partial<Hand>; hand?: Hand }) {
+  return (
+    <span className="cost">
+      {(Object.keys(recipe) as Resource[]).flatMap((r) =>
+        Array.from({ length: recipe[r] ?? 0 }, (_, i) => (
+          <span key={`${r}${i}`} className={hand && hand[r] < (recipe[r] ?? 0) ? 'lacking' : ''} title={RESOURCE_INFO[r].label}>
+            {RESOURCE_INFO[r].emoji}
+          </span>
+        )),
+      )}
+    </span>
+  );
 }
 
 export const nationIcon = (G: GState, n: NationId) => G.nations[n]!.icon;

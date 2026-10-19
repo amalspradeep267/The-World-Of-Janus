@@ -37,35 +37,49 @@ Bot nations ("no ruler") fill the map so small groups still have plenty to deduc
 
 ## Round structure (6 rounds)
 
-1. **☀️ Harvest.** Everyone's nation gets +1 of each of its 3 resources. Then 2d6 is rolled twice, and each matching tile yields 2. Trade routes add a bonus (see below).
+1. **☀️ Harvest.** Every city gets +1 of each of its 3 resources. Then one pair of dice is rolled, and each matching tile yields 2. Trade routes add a bonus (see below).
 2. **☀️ Day: Diplomacy (public, by persona).** Talk on Discord.
-   - **Trade** resources with other players. Trades are logged publicly, so giving away 🧵 Silk hints that you rule a Silk nation.
-   - **Sell** at market for gold. Sales are public and push the price down.
-   - **Tribunal** (from round 3): a majority vote exposes a player's nation and faction.
-3. **🌙 Night: Under the Table (secret, by icon).**
-   - **Envoy** (any 2 resources): ask another nation for a connection. The target accepts or declines. **If they accept, they alone learn the sender's persona.** Unanswered envoys expire after a day and a night.
-   - **Open trade** (any 3 resources) in one good with a connected nation. From then on, whenever either nation harvests that good, the other gets 1 too. Routes are mutual, so you may be feeding your enemy.
-   - **Spy** (4 gold): ask whether a specific player rules a specific nation. Only you get the answer, but the news reports "spies spotted in 🐉".
-4. **📰 Morning news.** All night activity is listed by icon in shuffled order, plus market moves ("🌾 Grain ▲ 16%"). Spending pushes prices up, so the markets hint at what was paid.
+   - **Trade** cards with other players. Trades are logged publicly.
+   - **Sell** at the market for gold. Sales are public and push the price down.
+   - **Tribunal** (from round 3): a majority vote exposes a player's city and faction.
+3. **🌙 Night: Under the Table (secret, by city).**
+   - **✉️ Envoy** (🌾 Grain + 🐑 Wool): ask another city for a connection. **If they accept, they alone learn the sender's persona.** Unanswered envoys expire after a day and a night.
+   - **🤝 Open trade** (🪵 Timber + 🪨 Stone) in one good with a connected city. From then on, whenever either city harvests that good, the other gets 1 too.
+   - **🕵️ Spy** (4 gold): ask whether a specific player rules a specific city. Only you get the answer, but the news reports "spies spotted".
+   - **🕶️ Smuggle** (market price × 1.5 in gold): buy one card, delivered at dawn. Nobody sees who bought it.
+   - **🕶️ Pump** (2 gold): fake demand for a resource so its price jumps in the morning. Sell high the next day, but selling right after a spike looks suspicious.
+4. **📰 Morning news.** All night activity, listed by city icon in shuffled order, plus market moves. Spending, smuggling and pumping all push prices up.
+
+### Limits
+- Each city can have at most **3 connections**, and each connection can carry at most **2 traded goods**.
+- Everyone's **card count** (not which cards) is public. It updates at dawn and after public trades or sales, never in the middle of the night, so spending can't be watched as it happens. Hoarding shows.
+
+## Trading is cover
+
+Each city produces only 3 of the 7 resources, and the recipes need specific cards. So most players **can't act at night without getting cards from someone**:
+- **Trade by day:** cheap, but public. Asking for 🌾 Grain hints that you're planning an envoy.
+- **Smuggle by night:** secret, but expensive.
+- **Decoy trades:** trading for cards you don't need muddies what you're really up to.
 
 ## How deduction works
-1. Public trades and sales reveal which resources a persona holds.
-2. Each nation's 3 resources are public, so holdings point to a small set of nations.
-3. The news reports icon-to-icon activity.
-4. Market moves show which resources were spent.
-5. Routes and pending envoys are drawn on the map.
+1. Public trades and sales reveal which resources a persona holds and wants.
+2. Each city's 3 resources are public, so holdings point to a small set of cities.
+3. The recipes tie night actions to specific cards: whoever just traded for 🌾 + 🐑 probably sent that envoy.
+4. The news reports city-to-city activity. Market moves show what was spent, smuggled or pumped.
+5. Card counts show who is hoarding.
 6. Accepted envoys and spies give hard facts privately; the Tribunal gives them publicly.
 
 ## Decisions log
 - Factions are fictional; historic figures are cosmetic personas.
 - Envoys: the sender's persona is revealed to the receiver only, and only on accept. The news reports the connection by icon. *Revisit after playtests.*
-- Accepting a bot's envoy reveals "no player rules this nation". That's a real clue, and intentional for now.
+- Accepting a bot's envoy reveals "no player rules this city". That's a real clue, and intentional for now.
 - Session length is about 35 minutes. Multi-day play is parked for now.
 - Hosting: static site on GitHub Pages plus peer-to-peer (the host's browser runs the game). No server.
 
 ## Roadmap
 - [x] **M1: Diplomacy loop.** Map, harvest, trade, market, envoys, routes, spies, news, Tribunal, bots, P2P rooms
-- [ ] **M2: Arms and War.** Rounds 3–4 unlock borders and weapons (refined goods such as Steel = Ore + Coal, only via routes); rounds 5–7 allow attacks (dice plus weapons vs fortifications plus secret ally support). The Pact's real win becomes conquest: 60% of the map.
+- [x] **M1.5: Economy.** Specific recipes, black market (smuggle, pump), route caps, public card counts, sound cues, quit to home
+- [ ] **M2: Arms and War.** Weapons need ⛏️ Ore + 🔥 Coal **and gold** (money pays for armies); forts need stone and timber; attacks are dice plus weapons vs forts plus secret ally support. Hoarding war materials is a tell. The Pact's real win becomes conquest.
 - [ ] **M3: Nobody sits out.** A conquered player becomes a *Government in Exile*: still wins with their faction, still votes, earns Unrest to sabotage occupiers, and can plant one rumor in the news each round.
 - [ ] **M4: Persona abilities** that leave fingerprints, e.g. Spymaster envoys show as ❓ in the news.
-- [ ] Phase timers (2 min day / 60 s night), host reconnect and saved state, sound cues.
+- [ ] Phase timers (2 min day / 60 s night), host reconnect and saved state.
