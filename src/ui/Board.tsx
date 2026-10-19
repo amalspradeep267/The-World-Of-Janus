@@ -87,7 +87,7 @@ export function Board(props: BoardProps<GState>) {
   const hint =
     phase === 'day'
       ? 'Talk on Discord · trade or sell with the buttons on the right · then press Ready'
-      : 'Click a nation on the map to act in secret · then press Ready';
+      : 'Click a city on the map to act in secret · then press Ready';
 
   return (
     <div className={`board ${phase}`}>
@@ -138,7 +138,7 @@ export function Board(props: BoardProps<GState>) {
             <div key={e.id} className="toast">
               <span className="ti">{nationIcon(G, e.from)}✉️</span>
               <span className="tt">
-                <b>{nationName(G, e.from)}</b> sent your nation an envoy. Accept to connect and learn who sent it.
+                <b>{nationName(G, e.from)}</b> sent your city an envoy. Accept to connect and learn who sent it.
               </span>
               <button className="good tiny" onClick={() => moves.respondEnvoy(e.id, true)}>Accept</button>
               <button className="bad tiny" onClick={() => moves.respondEnvoy(e.id, false)}>Refuse</button>
@@ -261,7 +261,7 @@ export function Board(props: BoardProps<GState>) {
             </div>
             <h2>
               {nationName(G, reveal)} is ruled by{' '}
-              {me.known[reveal] === 'bot' ? 'nobody (a bot nation)' : personaOf(G, me.known[reveal]!).persona}
+              {me.known[reveal] === 'bot' ? 'nobody (a bot city)' : personaOf(G, me.known[reveal]!).persona}
             </h2>
             <p className="muted small">Only you know this. It's saved under 🎭 your secret.</p>
             <button className="primary" onClick={() => setRevealQueue((q) => q.slice(1))}>Got it</button>
@@ -298,7 +298,7 @@ function Result({ G, playerID }: { G: GState; playerID: string }) {
           })}
         </div>
         <p className="small muted" style={{ marginTop: 12 }}>
-          Bot nations: {G.nationOrder.filter((n) => G.owners[n] === 'bot').map((n) => nationIcon(G, n)).join(' ') || 'none'}
+          Bot cities: {G.nationOrder.filter((n) => G.owners[n] === 'bot').map((n) => nationIcon(G, n)).join(' ') || 'none'}
         </p>
         <a href="#/">Back to the lobby</a>
       </div>

@@ -119,7 +119,7 @@ export function TribunalModal({ G, playerID, moves, onClose }: { G: GState; play
   return (
     <Modal icon="⚖️" title="Tribunal" onClose={onClose}>
       <p className="small muted">
-        Accuse someone. If <b>{majority}</b> players accuse the same person by dusk, their nation and faction are revealed. Exposing an
+        Accuse someone. If <b>{majority}</b> players accuse the same person by dusk, their city and faction are revealed. Exposing an
         innocent hands the Iron Pact the win.
       </p>
       <div className="pick-grid" style={{ marginTop: 12 }}>
@@ -265,7 +265,7 @@ export function NewsArchive({ G, onOpenLatest, onClose }: { G: GState; onOpenLat
                 case 'spy':
                   return <span key={i} title="Spies spotted">🕵️{nationIcon(G, it.nation)}</span>;
                 case 'prologue':
-                  return <span key={i} className="small">{it.nations} nations, {it.players} ruled by players</span>;
+                  return <span key={i} className="small">{it.nations} cities, {it.players} ruled by players</span>;
                 case 'market':
                   return (
                     <span key={i} className="small">
@@ -292,12 +292,12 @@ export function Welcome({ G, me, onClose }: { G: GState; me: PlayerSecret; onClo
       <div className="overlay">
         <div className="modal wide">
           <h1 style={{ textAlign: 'center' }}>🎭 The World of Janus</h1>
-          <p className="muted" style={{ textAlign: 'center' }}>Everyone knows who's playing. Nobody knows who rules which nation.</p>
+          <p className="muted" style={{ textAlign: 'center' }}>Everyone knows who's playing. Nobody knows who rules which city.</p>
           <div className="howto">
-            <div><span className="hi">🎭</span><b>You rule a nation</b><span>in secret. Your persona is public; your nation isn't.</span></div>
+            <div><span className="hi">🎭</span><b>You rule a city</b><span>in secret. Your persona is public; your city isn't.</span></div>
             <div><span className="hi">☀️</span><b>Day</b><span>Talk on Discord. Trade cards openly. Accuse at the ⚖️ Tribunal.</span></div>
-            <div><span className="hi">🌙</span><b>Night</b><span>Click a nation on the map to send envoys, open trade or spy.</span></div>
-            <div><span className="hi">📰</span><b>Morning news</b><span>shows what each nation did, but never who did it.</span></div>
+            <div><span className="hi">🌙</span><b>Night</b><span>Click a city on the map to send envoys, open trade or spy.</span></div>
+            <div><span className="hi">📰</span><b>Morning news</b><span>shows what each city did, but never who did it.</span></div>
           </div>
           <p className="small muted" style={{ textAlign: 'center' }}>
             {MAX_ROUNDS} rounds. The Tribunal opens on day {TRIBUNAL_FROM_ROUND}. When you're done with a phase, press <b>Ready</b>.

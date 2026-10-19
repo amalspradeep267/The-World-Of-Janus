@@ -40,7 +40,7 @@ function Home() {
       <div className="home-hero">
         <div className="mask">🎭</div>
         <h1>The World of Janus</h1>
-        <p className="muted">Everyone knows who's at the table. Nobody knows who rules which nation.</p>
+        <p className="muted">Everyone knows who's at the table. Nobody knows who rules which city.</p>
       </div>
       <div className="home-grid">
         <div className="card">

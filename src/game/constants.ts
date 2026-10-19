@@ -14,14 +14,14 @@ export const RESOURCE_INFO: Record<Resource, { label: string; emoji: string; col
 };
 
 export const NATIONS = [
-  { id: 'lion', icon: '🦁', name: 'Lion' },
-  { id: 'eagle', icon: '🦅', name: 'Eagle' },
-  { id: 'dragon', icon: '🐉', name: 'Dragon' },
-  { id: 'wolf', icon: '🐺', name: 'Wolf' },
-  { id: 'bear', icon: '🐻', name: 'Bear' },
-  { id: 'serpent', icon: '🐍', name: 'Serpent' },
-  { id: 'stag', icon: '🦌', name: 'Stag' },
-  { id: 'owl', icon: '🦉', name: 'Owl' },
+  { id: 'newyork', icon: '🗽', name: 'New York' },
+  { id: 'london', icon: '💂', name: 'London' },
+  { id: 'paris', icon: '🗼', name: 'Paris' },
+  { id: 'rio', icon: '🏖️', name: 'Rio' },
+  { id: 'tokyo', icon: '🏯', name: 'Tokyo' },
+  { id: 'cairo', icon: '🐪', name: 'Cairo' },
+  { id: 'rome', icon: '🏛️', name: 'Rome' },
+  { id: 'sydney', icon: '🦘', name: 'Sydney' },
 ] as const;
 export type NationId = (typeof NATIONS)[number]['id'];
 

@@ -328,7 +328,7 @@ const respondEnvoy = hostOnly(({ G, playerID }, id: number, accept: boolean) => 
     round: G.round,
     text:
       sender === 'bot'
-        ? `You accepted the envoy from ${icon(G, e.from)}. Its seal bears no persona: no player controls it.`
+        ? `You accepted the envoy from ${icon(G, e.from)}. Its seal bears no persona: no player rules it.`
         : `You accepted the envoy from ${icon(G, e.from)}. It was sent by ${persona(G, sender)}.`,
   });
 });

@@ -37,7 +37,7 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
     : [];
 
   const ruler = mine ? (
-    <span className="muted small">Your nation</span>
+    <span className="muted small">Your city</span>
   ) : owner === undefined ? (
     <span className="muted small">Ruler: ❓ unknown</span>
   ) : owner === 'bot' ? (
@@ -74,10 +74,10 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
 
       {mine ? (
         <p className="small muted" style={{ marginTop: 12 }}>
-          You serve the <b>{FACTION_INFO[me.faction].label}</b>. Nobody else knows that this is you.
+          You serve the <b>{FACTION_INFO[me.faction].label}</b>. Nobody else knows this city is yours.
         </p>
       ) : phase === 'day' ? (
-        <p className="small muted" style={{ marginTop: 12 }}>🌙 You can act on this nation at night.</p>
+        <p className="small muted" style={{ marginTop: 12 }}>🌙 You can act on this city at night.</p>
       ) : (
         <>
           {!route && !pending && (
@@ -125,7 +125,7 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
             <span className="ai">🕵️</span>
             <span>
               <b>Send spies</b>
-              <span>{me.gold < COST.spyGold ? `Needs ${COST.spyGold} gold. Sell cards at the 💰 market by day.` : 'Ask: is this nation ruled by…?'}</span>
+              <span>{me.gold < COST.spyGold ? `Needs ${COST.spyGold} gold. Sell cards at the 💰 market by day.` : 'Ask: is this city ruled by…?'}</span>
             </span>
             <span className="cost">{'🪙'.repeat(COST.spyGold)}</span>
           </button>
