@@ -78,7 +78,7 @@ export const MAP_RADIUS = 3;
 export const TILES_PER_NATION = 3;
 
 /** Dice rolls per harvest; each matching tile yields DICE_YIELD of its resource. */
-export const HARVEST_ROLLS = 2;
+export const HARVEST_ROLLS = 1;
 export const DICE_YIELD = 2;
 /** Every nation gets this much of each of its own resources every day, dice or not. */
 export const BASE_INCOME = 1;

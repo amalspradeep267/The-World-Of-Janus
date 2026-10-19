@@ -37,11 +37,11 @@ function Home() {
 
   return (
     <div className="home">
-      <h1>🎭 The World of Janus</h1>
-      <p className="muted">
-        Everyone knows who's at the table. Nobody knows who rules which nation. Trade by day, scheme by night, and work out
-        who your real allies are before it's too late.
-      </p>
+      <div className="home-hero">
+        <div className="mask">🎭</div>
+        <h1>The World of Janus</h1>
+        <p className="muted">Everyone knows who's at the table. Nobody knows who rules which nation.</p>
+      </div>
       <div className="home-grid">
         <div className="card">
           <h2>Host a game</h2>
@@ -159,7 +159,7 @@ function Room({ code, roster }: { code: string; roster: string[] }) {
   }
 
   return (
-    <>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {host && (
         <div className="seat-tabs">
           <span className="small">
@@ -181,8 +181,10 @@ function Room({ code, roster }: { code: string; roster: string[] }) {
           Connection problem: {error}
         </div>
       )}
-      <GameClient matchID={code} playerID={seat} credentials={getCredentials(code)} />
-    </>
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <GameClient matchID={code} playerID={seat} credentials={getCredentials(code)} />
+      </div>
+    </div>
   );
 }
 

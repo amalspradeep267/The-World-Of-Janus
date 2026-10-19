@@ -53,6 +53,8 @@ export interface PlayerSecret {
   known: Partial<Record<NationId, Controller>>;
   inbox: { round: number; text: string }[];
   plans: NightPlan[];
+  /** What this morning's harvest brought: own land, and extra from trade routes. */
+  harvest: { land: Hand; routes: Hand };
 }
 
 export interface Trade {
@@ -70,6 +72,22 @@ export interface RosterEntry {
   persona: string;
 }
 
+/** Morning news is structured so the UI can draw it instead of printing sentences. */
+export type NewsItem =
+  | { t: 'prologue'; nations: number; players: number }
+  | { t: 'envoy'; from: NationId; to: NationId }
+  | { t: 'accepted' | 'declined' | 'expired'; from: NationId; to: NationId }
+  | { t: 'route'; a: NationId; b: NationId; good: Resource }
+  | { t: 'spy'; nation: NationId }
+  | { t: 'quiet' }
+  | { t: 'market'; changes: Partial<Record<Resource, number>> };
+
+export interface Verdict {
+  round: number;
+  /** null when votes were cast but nobody reached a majority. */
+  target: PlayerID | null;
+}
+
 export interface GameResult {
   winners: Faction[];
   reason: string;
@@ -83,19 +101,22 @@ export interface GState {
   routes: Route[];
   envoys: Envoy[];
   round: number;
+  /** This morning's dice, one pair per harvest roll, and their sums. */
+  dice: [number, number][];
   rolls: number[];
   prices: Record<Resource, number>;
   priceChange: Partial<Record<Resource, number>>;
   /** Units spent at night / sold by day this round; drives the price moves. */
   demand: Partial<Record<Resource, number>>;
   /** Morning news per round, newest last. Reports nations, never players. */
-  news: { round: number; items: string[] }[];
+  news: { round: number; items: NewsItem[] }[];
   /** The public (surface-layer) log: trades, sales and the Tribunal, by persona. */
   publicLog: { round: number; text: string }[];
   trades: Trade[];
   votes: Record<PlayerID, PlayerID | null>;
   ready: Record<PlayerID, boolean>;
   revealed: Record<PlayerID, { nation: NationId; faction: Faction }>;
+  verdicts: Verdict[];
   wrongExposures: number;
   nextId: number;
   result: GameResult | null;

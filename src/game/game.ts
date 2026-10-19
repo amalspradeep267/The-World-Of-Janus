@@ -28,7 +28,7 @@ import {
   type Resource,
 } from './constants';
 import { generateMap, type Rng } from './map';
-import type { GameResult, GState, Hand, PlayerID, PlayerSecret, Route } from './types';
+import type { GameResult, GState, Hand, NewsItem, PlayerID, PlayerSecret, Route } from './types';
 
 export const GAME_NAME = 'the-world-of-janus';
 
@@ -115,7 +115,8 @@ function startDay({ G, random }: { G: GState; random: Rng & { D6(): number } }) 
   G.ready = {};
   G.trades = G.trades.filter((t) => t.status === 'open'); // (always empty here; kept for safety)
 
-  G.rolls = Array.from({ length: HARVEST_ROLLS }, () => random.D6() + random.D6());
+  G.dice = Array.from({ length: HARVEST_ROLLS }, () => [random.D6(), random.D6()] as [number, number]);
+  G.rolls = G.dice.map(([a, b]) => a + b);
 
   const gains: Partial<Record<NationId, Hand>> = {};
   for (const n of G.nationOrder) {
@@ -142,6 +143,7 @@ function startDay({ G, random }: { G: GState; random: Rng & { D6(): number } }) 
     const g = gains[p.nation]!;
     const b = bonus[p.nation]!;
     for (const r of RESOURCES) p.hand[r] += g[r] + b[r];
+    p.harvest = { land: g, routes: b };
     const routePart = handTotal(b) > 0 ? ` Trade routes brought in ${formatGoods(b)}.` : '';
     p.inbox.push({ round: G.round, text: `Harvest: ${formatGoods(g)}.${routePart}` });
   }
@@ -156,6 +158,7 @@ function endDay({ G }: { G: GState }) {
     for (const target of Object.values(G.votes)) if (target != null) tally[target] = (tally[target] ?? 0) + 1;
     const majority = Math.floor(G.roster.length / 2) + 1;
     const exposed = Object.keys(tally).find((pid) => tally[pid] >= majority && !G.revealed[pid]);
+    if (Object.keys(tally).length > 0) G.verdicts.push({ round: G.round, target: exposed ?? null });
     if (exposed) {
       const p = G.players[exposed];
       G.revealed[exposed] = { nation: p.nation, faction: p.faction };
@@ -183,7 +186,7 @@ function startNight({ G }: { G: GState }) {
 }
 
 function resolveNight({ G, random }: { G: GState; random: Rng }) {
-  const items: string[] = [];
+  const items: NewsItem[] = [];
 
   // Player actions, in shuffled order so the news order leaks nothing.
   for (const pid of random.Shuffle(humans(G))) {
@@ -196,7 +199,7 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
           continue;
         }
         G.envoys.push({ id: G.nextId++, from: p.nation, to: plan.to, sentRound: G.round, status: 'pending' });
-        items.push(`✉️ ${icon(G, p.nation)} sent an envoy to ${icon(G, plan.to)}.`);
+        items.push({ t: 'envoy', from: p.nation, to: plan.to });
       } else if (plan.kind === 'route') {
         const rt = findRoute(G, p.nation, plan.with);
         if (!rt || rt.goods.includes(plan.good)) {
@@ -205,9 +208,7 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
           continue;
         }
         rt.goods.push(plan.good);
-        items.push(
-          `🤝 ${icon(G, rt.a)} and ${icon(G, rt.b)} opened trade in ${RESOURCE_INFO[plan.good].emoji} ${RESOURCE_INFO[plan.good].label}.`,
-        );
+        items.push({ t: 'route', a: rt.a, b: rt.b, good: plan.good });
       } else {
         const truth = G.owners[plan.nation] === plan.suspect;
         p.inbox.push({
@@ -215,7 +216,7 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
           text: `🕵️ Your spies report: ${icon(G, plan.nation)} is ${truth ? '' : 'NOT '}controlled by ${persona(G, plan.suspect)}.`,
         });
         if (truth) p.known[plan.nation] = plan.suspect;
-        items.push(`🕵️ Foreign spies were spotted in ${icon(G, plan.nation)}.`);
+        items.push({ t: 'spy', nation: plan.nation });
       }
       if ('paid' in plan) for (const r of RESOURCES) if (plan.paid[r]) addDemand(G, r, plan.paid[r]!);
     }
@@ -238,7 +239,7 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
       if (targets.length) {
         const to = random.Shuffle(targets)[0];
         G.envoys.push({ id: G.nextId++, from: n, to, sentRound: G.round, status: 'pending' });
-        items.push(`✉️ ${icon(G, n)} sent an envoy to ${icon(G, to)}.`);
+        items.push({ t: 'envoy', from: n, to });
         for (let k = 0; k < COST.envoy; k++) addDemand(G, random.Shuffle([...res])[0], 1);
       }
     }
@@ -252,9 +253,7 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
       if (options.length) {
         const { rt, good } = random.Shuffle(options)[0];
         rt.goods.push(good);
-        items.push(
-          `🤝 ${icon(G, rt.a)} and ${icon(G, rt.b)} opened trade in ${RESOURCE_INFO[good].emoji} ${RESOURCE_INFO[good].label}.`,
-        );
+        items.push({ t: 'route', a: rt.a, b: rt.b, good });
         for (let k = 0; k < COST.route; k++) addDemand(G, random.Shuffle([...res])[0], 1);
       }
     }
@@ -268,28 +267,24 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
     }
   }
   for (const e of G.envoys) {
-    if (e.resolvedRound !== G.round) continue;
-    if (e.status === 'accepted') items.push(`🏛️ ${icon(G, e.to)} accepted the envoy from ${icon(G, e.from)}. A connection is open.`);
-    if (e.status === 'declined') items.push(`🚪 ${icon(G, e.to)} turned away the envoy from ${icon(G, e.from)}.`);
-    if (e.status === 'expired') items.push(`🕯️ ${icon(G, e.to)} never answered the envoy from ${icon(G, e.from)}.`);
+    if (e.resolvedRound !== G.round || e.status === 'pending') continue;
+    items.push({ t: e.status, from: e.from, to: e.to });
   }
 
   // Markets.
   G.priceChange = {};
-  const moves: string[] = [];
   for (const r of RESOURCES) {
     const net = G.demand[r] ?? 0;
     if (net === 0) continue;
     const pct = Math.max(-PRICE_CAP_PCT, Math.min(PRICE_CAP_PCT, net * PRICE_STEP_PCT));
     G.prices[r] = Math.max(1, Math.round(G.prices[r] * (1 + pct / 100) * 10) / 10);
     G.priceChange[r] = pct;
-    moves.push(`${RESOURCE_INFO[r].emoji} ${RESOURCE_INFO[r].label} ${pct > 0 ? '▲' : '▼'} ${Math.abs(pct)}%`);
   }
   G.demand = {};
 
   const news = random.Shuffle(items);
-  if (news.length === 0) news.push('A quiet night. Nothing of note was reported.');
-  if (moves.length) news.push(`📈 Markets: ${moves.join(' · ')}`);
+  if (news.length === 0) news.push({ t: 'quiet' });
+  if (Object.keys(G.priceChange).length) news.push({ t: 'market', changes: { ...G.priceChange } });
   G.news.push({ round: G.round, items: news });
   G.ready = {};
 
@@ -472,7 +467,16 @@ export function makeGame(names: string[]): Game<GState> {
         owners[nation] = id;
         const hand = emptyHand();
         for (const r of nations[nation]!.resources) hand[r] = START_EACH;
-        players[id] = { nation, faction: dealt[i], hand, gold: START_GOLD, known: { [nation]: id }, inbox: [], plans: [] };
+        players[id] = {
+          nation,
+          faction: dealt[i],
+          hand,
+          gold: START_GOLD,
+          known: { [nation]: id },
+          inbox: [],
+          plans: [],
+          harvest: { land: emptyHand(), routes: emptyHand() },
+        };
       });
 
       // The Pact knows itself; some Concord members get one trusted partner.
@@ -506,6 +510,7 @@ export function makeGame(names: string[]): Game<GState> {
         routes: [],
         envoys: [],
         round: 0,
+        dice: [],
         rolls: [],
         prices: Object.fromEntries(RESOURCES.map((r) => [r, START_PRICE])) as Record<Resource, number>,
         priceChange: {},
@@ -513,9 +518,7 @@ export function makeGame(names: string[]): Game<GState> {
         news: [
           {
             round: 0,
-            items: [
-              `🗺️ ${nationOrder.length} nations share the continent. ${count} are ruled by the people at this table; the rest answer to no one.`,
-            ],
+            items: [{ t: 'prologue', nations: nationOrder.length, players: count }],
           },
         ],
         publicLog: [],
@@ -523,6 +526,7 @@ export function makeGame(names: string[]): Game<GState> {
         votes: {},
         ready: {},
         revealed: {},
+        verdicts: [],
         wrongExposures: 0,
         nextId: 1,
         result: null,

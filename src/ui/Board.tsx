@@ -1,479 +1,274 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { BoardProps } from 'boardgame.io/react';
-import {
-  COST,
-  FACTION_INFO,
-  MAX_ROUNDS,
-  RESOURCES,
-  RESOURCE_INFO,
-  TRIBUNAL_FROM_ROUND,
-  type NationId,
-  type Resource,
-} from '../game/constants';
-import { findRoute, formatGoods, handTotal, icon } from '../game/game';
-import type { GState, Hand, PlayerSecret } from '../game/types';
+import { FACTION_INFO, MAX_ROUNDS, RESOURCES, RESOURCE_INFO, TRIBUNAL_FROM_ROUND, type NationId } from '../game/constants';
+import type { GState } from '../game/types';
+import { Avatar, Die, GoldCard, goodsEmoji, Modal, nationIcon, nationName, personaOf, ResCard } from './common';
 import { HexMap } from './HexMap';
-import { clean, GoodsPicker, HandView } from './widgets';
+import { IdentityModal, MarketModal, NewsArchive, PlayersModal, TradeModal, TribunalModal, Welcome } from './Modals';
+import { NationSheet } from './NationSheet';
+import { MorningPaper, VerdictOverlay } from './Paper';
 
-type Tab = 'actions' | 'dossier' | 'news' | 'table';
+type Panel = null | 'trade' | 'market' | 'tribunal' | 'identity' | 'players' | 'news';
+
+function storageFlag(key: string): [boolean, () => void] {
+  let v = false;
+  try {
+    v = localStorage.getItem(key) === '1';
+  } catch {
+    /* ignore */
+  }
+  return [
+    v,
+    () => {
+      try {
+        localStorage.setItem(key, '1');
+      } catch {
+        /* ignore */
+      }
+    },
+  ];
+}
 
 export function Board(props: BoardProps<GState>) {
-  const { G, ctx, playerID, isConnected } = props;
-  const [selected, setSelected] = useState<NationId | null>(null);
-  const [tab, setTab] = useState<Tab>('actions');
-  const [seenNews, setSeenNews] = useState(0);
+  const { G, ctx, playerID, isConnected, moves, matchID } = props;
   const me = playerID != null ? G.players[playerID] : undefined;
+  const phase = ctx.phase as 'day' | 'night';
+
+  const [selected, setSelected] = useState<NationId | null>(null);
+  const [panel, setPanel] = useState<Panel>(null);
+  const welcomeKey = `janus:welcome:${matchID}:${playerID}`;
+  const [welcomeSeen, markWelcome] = storageFlag(welcomeKey);
+  const [welcome, setWelcome] = useState(!welcomeSeen && G.round <= 1);
+  // Remember what this player has already seen, so new papers and verdicts pop up exactly once.
+  const [paperSeen, setPaperSeen] = useState(G.news.length);
+  const [forcePaper, setForcePaper] = useState(false);
+  const [verdictSeen, setVerdictSeen] = useState(G.verdicts.length);
+  const [revealQueue, setRevealQueue] = useState<NationId[]>([]);
+  const knownRef = useRef<Set<string>>(new Set(Object.keys(me?.known ?? {})));
 
   useEffect(() => {
-    if (tab === 'news') setSeenNews(G.news.length);
-  }, [tab, G.news.length]);
+    if (!me) return;
+    const fresh = Object.keys(me.known).filter((n) => !knownRef.current.has(n));
+    if (fresh.length) {
+      fresh.forEach((n) => knownRef.current.add(n));
+      setRevealQueue((q) => [...q, ...(fresh as NationId[])]);
+    }
+  }, [me?.known]);
+
+  useEffect(() => setSelected(null), [phase]);
 
   if (!me) return <div className="home"><p>Spectating isn't supported yet.</p></div>;
 
-  const phase = ctx.phase as 'day' | 'night';
   const ready = !!G.ready[playerID!];
+  const showPaper = !welcome && ((phase === 'day' && G.news.length > paperSeen && G.round > 1) || forcePaper);
+  const showVerdict = !welcome && !showPaper && G.verdicts.length > verdictSeen;
+  const reveal = !welcome && !showPaper && !showVerdict ? revealQueue[0] : undefined;
+
+  const incomingEnvoys = G.envoys.filter((e) => e.to === me.nation && e.status === 'pending');
+  const incomingTrades = G.trades.filter((t) => t.to === playerID && t.status === 'open');
+  const tribunalOpen = G.round >= TRIBUNAL_FROM_ROUND;
+
+  const tools: { id: Panel; icon: string; label: string; show: boolean; disabled?: boolean; badge?: number; title?: string }[] = [
+    { id: 'trade', icon: '🔁', label: 'Trade', show: phase === 'day' },
+    { id: 'market', icon: '💰', label: 'Market', show: phase === 'day' },
+    {
+      id: 'tribunal',
+      icon: '⚖️',
+      label: 'Tribunal',
+      show: phase === 'day',
+      disabled: !tribunalOpen,
+      title: tribunalOpen ? 'Accuse a player' : `Opens on day ${TRIBUNAL_FROM_ROUND}`,
+      badge: Object.values(G.votes).filter((v) => v === playerID).length || undefined,
+    },
+    { id: 'news', icon: '📰', label: 'News', show: true },
+    { id: 'players', icon: '👥', label: 'Players', show: true },
+  ];
+
+  const hint =
+    phase === 'day'
+      ? 'Talk on Discord · trade or sell with the buttons on the right · then press Ready'
+      : 'Click a nation on the map to act in secret · then press Ready';
 
   return (
-    <div className="board">
+    <div className={`board ${phase}`}>
       <header className="topbar">
-        <span className={`phase ${phase}`}>
-          {phase === 'day' ? '☀️ Day: Diplomacy' : '🌙 Night: Under the Table'}
-        </span>
-        <span className="muted">
-          Round {G.round} / {MAX_ROUNDS}
-        </span>
-        {G.rolls.length > 0 && <span title="This morning's harvest rolls">🎲 {G.rolls.join(' · ')}</span>}
-        {!isConnected && <span className="chip" style={{ color: 'var(--bad)' }}>Reconnecting…</span>}
+        <span className="logo">JANUS</span>
+        <div className="stack" style={{ gap: 4 }}>
+          <span className="rounds" title={`Round ${G.round} of ${MAX_ROUNDS}`}>
+            {Array.from({ length: MAX_ROUNDS }, (_, i) => (
+              <i key={i} className={i + 1 < G.round ? 'done' : i + 1 === G.round ? 'now' : ''} />
+            ))}
+          </span>
+          <span className="small muted">Day {G.round} of {MAX_ROUNDS}</span>
+        </div>
+        <div className="phase-title">
+          <b>{phase === 'day' ? '☀️ Day: Diplomacy' : '🌙 Night: Under the Table'}</b>
+          <span>{phase === 'day' ? 'Everything you do now is public' : 'Everything you do now is secret'}</span>
+        </div>
         <span className="spacer" />
-        <span className="row">
+        {!isConnected && <span className="small" style={{ color: 'var(--bad)' }}>⚠ Reconnecting…</span>}
+        <div className="avatars">
           {G.roster.map((p) => (
-            <span key={p.id} className={`chip ${G.ready[p.id] ? 'on' : ''}`} title={p.name}>
-              {G.ready[p.id] ? '✓' : '…'} {p.persona}
-            </span>
+            <Avatar key={p.id} persona={p.persona} ready={!!G.ready[p.id]} title={`${p.persona} (${p.name})${G.ready[p.id] ? ': ready' : ''}`} />
           ))}
-        </span>
-        <button className={ready ? '' : 'primary'} onClick={() => props.moves.setReady(!ready)}>
-          {ready ? 'Wait, not ready' : phase === 'day' ? 'Ready for night' : 'Ready for morning'}
+        </div>
+        <button className={`ready-btn big ${ready ? '' : 'primary'}`} onClick={() => moves.setReady(!ready)}>
+          {ready ? '⏳ Waiting… (undo)' : phase === 'day' ? 'Ready for night 🌙' : 'Ready for morning ☀️'}
         </button>
       </header>
 
-      <div className="main">
-        <div className="map-wrap">
-          <HexMap G={G} myNation={me.nation} selected={selected} onSelect={setSelected} />
+      <div className="stage" onClick={() => setSelected(null)}>
+        <HexMap G={G} myNation={me.nation} selected={selected} onSelect={setSelected} />
+
+        {/* Hidden by default: people often screen-share on Discord. */}
+        <div className="identity-badge" onClick={(e) => { e.stopPropagation(); setPanel('identity'); }} title="Click to see your secret">
+          <span className="nicon">🎭</span>
+          <span>
+            <b>{personaOf(G, playerID!).persona}</b>
+            <span>🔒 Click to see your secret</span>
+          </span>
         </div>
-        <aside className="side">
-          <nav className="tabs">
-            {(['actions', 'dossier', 'news', 'table'] as Tab[]).map((t) => (
-              <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>
-                {{ actions: 'Actions', dossier: 'Dossier', news: 'News', table: 'Table' }[t]}
-                {t === 'news' && G.news.length > seenNews && <span className="dot" />}
+
+        {selected && (
+          <NationSheet G={G} phase={phase} me={me} playerID={playerID!} nation={selected} moves={moves} onClose={() => setSelected(null)} />
+        )}
+
+        <div className="toasts" onClick={(e) => e.stopPropagation()}>
+          {incomingEnvoys.map((e) => (
+            <div key={e.id} className="toast">
+              <span className="ti">{nationIcon(G, e.from)}✉️</span>
+              <span className="tt">
+                <b>{nationName(G, e.from)}</b> sent your nation an envoy. Accept to connect and learn who sent it.
+              </span>
+              <button className="good tiny" onClick={() => moves.respondEnvoy(e.id, true)}>Accept</button>
+              <button className="bad tiny" onClick={() => moves.respondEnvoy(e.id, false)}>Refuse</button>
+            </div>
+          ))}
+          {incomingTrades.map((t) => (
+            <div key={t.id} className="toast">
+              <Avatar persona={personaOf(G, t.from).persona} />
+              <span className="tt">
+                <b>{personaOf(G, t.from).persona}</b> offers <span style={{ fontSize: 16 }}>{goodsEmoji(t.give)}</span> for{' '}
+                <span style={{ fontSize: 16 }}>{goodsEmoji(t.get)}</span>
+              </span>
+              <button className="good tiny" onClick={() => moves.respondTrade(t.id, true)}>Accept</button>
+              <button className="bad tiny" onClick={() => moves.respondTrade(t.id, false)}>No</button>
+            </div>
+          ))}
+        </div>
+
+        <nav className="toolbar" onClick={(e) => e.stopPropagation()}>
+          {tools
+            .filter((t) => t.show)
+            .map((t) => (
+              <button key={t.id} className="tool" disabled={t.disabled} title={t.title ?? t.label} onClick={() => setPanel(t.id)}>
+                {t.icon}
+                <small>{t.label}</small>
+                {t.badge ? <span className="badge">{t.badge}</span> : null}
               </button>
             ))}
-          </nav>
-          <div className="side-body">
-            {tab === 'actions' && <Actions {...props} me={me} selected={selected} setSelected={setSelected} />}
-            {tab === 'dossier' && <Dossier G={G} me={me} />}
-            {tab === 'news' && <News G={G} />}
-            {tab === 'table' && <TableView G={G} />}
+        </nav>
+
+        {G.dice.length > 0 && (
+          <div className="dice-tray" title="This morning's harvest roll: tiles with this number produce">
+            {G.dice.map(([a, b], i) => (
+              <div key={`${G.round}-${i}`} className="dice-pair">
+                <Die value={a} rolling />
+                <Die value={b} rolling delay={120} />
+                <span className="dice-sum">{a + b}</span>
+              </div>
+            ))}
           </div>
-        </aside>
+        )}
+
+        {!selected && <div className="hint-chip">{hint}</div>}
       </div>
 
-      {G.result && <Result G={G} playerID={playerID!} />}
-    </div>
-  );
-}
-
-// ---------- Actions ----------
-
-interface ActionsProps extends BoardProps<GState> {
-  me: PlayerSecret;
-  selected: NationId | null;
-  setSelected: (n: NationId | null) => void;
-}
-
-function Actions(props: ActionsProps) {
-  const { G, ctx, me, moves } = props;
-  const incoming = G.envoys.filter((e) => e.to === me.nation && e.status === 'pending');
-  return (
-    <div className="stack">
-      {incoming.length > 0 && (
-        <section>
-          <h3>Envoys at your gate</h3>
-          {incoming.map((e) => (
-            <div key={e.id} className="item secret">
-              <p>
-                {icon(G, e.from)} seeks a connection. Accepting reveals the sender's persona to you alone.
-              </p>
-              <div className="row">
-                <button className="good" onClick={() => moves.respondEnvoy(e.id, true)}>Accept</button>
-                <button className="bad" onClick={() => moves.respondEnvoy(e.id, false)}>Turn away</button>
-              </div>
-            </div>
+      <footer className="handbar">
+        <div className="hand">
+          {RESOURCES.filter((r) => me.hand[r] > 0).map((r) => (
+            <ResCard
+              key={r}
+              res={r}
+              count={me.hand[r]}
+              gain={phase === 'day' ? me.harvest.land[r] + me.harvest.routes[r] : undefined}
+            />
           ))}
-        </section>
-      )}
-      {ctx.phase === 'day' ? <DayActions {...props} /> : <NightActions {...props} />}
-    </div>
-  );
-}
-
-function DayActions({ G, me, moves, playerID }: ActionsProps) {
-  const others = G.roster.filter((p) => p.id !== playerID);
-  const [to, setTo] = useState(others[0]?.id ?? '');
-  const [give, setGive] = useState<Partial<Hand>>({});
-  const [get, setGet] = useState<Partial<Hand>>({});
-  const [sellPick, setSellRes] = useState<Resource>('grain');
-  const sellRes = me.hand[sellPick] > 0 ? sellPick : (RESOURCES.find((r) => me.hand[r] > 0) ?? sellPick);
-  const [sellQty, setSellQty] = useState(1);
-  const persona = (id: string) => G.roster.find((p) => p.id === id)!.persona;
-  const myVote = G.votes[playerID!];
-
-  return (
-    <>
-      <p className="muted small">
-        Talk it out on Discord. Everything you do by day is public and signed with your persona.
-      </p>
-
-      <section>
-        <h3>Trade offers</h3>
-        {G.trades.filter((t) => t.status === 'open').length === 0 && <p className="muted small">No open offers.</p>}
-        {G.trades
-          .filter((t) => t.status === 'open')
-          .map((t) => (
-            <div key={t.id} className="item">
-              <p>
-                <b>{persona(t.from)}</b> → <b>{persona(t.to)}</b>: gives {formatGoods(t.give)} for {formatGoods(t.get)}
-              </p>
-              {t.to === playerID && (
-                <div className="row">
-                  <button className="good" onClick={() => moves.respondTrade(t.id, true)}>Accept</button>
-                  <button className="bad" onClick={() => moves.respondTrade(t.id, false)}>Decline</button>
-                </div>
-              )}
-              {t.from === playerID && <button className="tiny" onClick={() => moves.cancelTrade(t.id)}>Cancel</button>}
-            </div>
-          ))}
-        <div className="item stack">
-          <div className="row">
-            <span>Offer to</span>
-            <select value={to} onChange={(e) => setTo(e.target.value)}>
-              {others.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.persona} ({p.name})
-                </option>
-              ))}
-            </select>
-          </div>
-          <span className="small muted">You give</span>
-          <GoodsPicker value={give} onChange={setGive} max={me.hand} />
-          <span className="small muted">You ask for</span>
-          <GoodsPicker value={get} onChange={setGet} />
-          <button
-            disabled={handTotal(give) === 0 || handTotal(get) === 0}
-            onClick={() => {
-              moves.proposeTrade(to, clean(give), clean(get));
-              setGive({});
-              setGet({});
-            }}
-          >
-            Propose trade
-          </button>
+          {RESOURCES.every((r) => me.hand[r] === 0) && <span className="hand-empty">No cards in hand.</span>}
         </div>
-      </section>
-
-      <section>
-        <h3>Market</h3>
-        <div className="row small">
-          {RESOURCES.map((r) => (
-            <span key={r} className="chip">
-              {RESOURCE_INFO[r].emoji} {G.prices[r]}g
-              {G.priceChange[r] ? (G.priceChange[r]! > 0 ? ' ▲' : ' ▼') : ''}
-            </span>
-          ))}
-        </div>
-        <div className="row" style={{ marginTop: 8 }}>
-          <span>Sell</span>
-          <input type="number" min={1} max={me.hand[sellRes]} value={sellQty} onChange={(e) => setSellQty(Number(e.target.value))} style={{ width: 60 }} />
-          <select value={sellRes} onChange={(e) => setSellRes(e.target.value as Resource)}>
-            {RESOURCES.filter((r) => me.hand[r] > 0).map((r) => (
-              <option key={r} value={r}>
-                {RESOURCE_INFO[r].emoji} {RESOURCE_INFO[r].label} ({me.hand[r]})
-              </option>
-            ))}
-          </select>
-          <button disabled={!(sellQty >= 1 && me.hand[sellRes] >= sellQty)} onClick={() => moves.sell(sellRes, sellQty)}>
-            for {Math.floor(G.prices[sellRes] * sellQty)}g
-          </button>
-        </div>
-        <p className="small muted">Sales are public. Selling pushes the price down.</p>
-      </section>
-
-      <section>
-        <h3>⚖️ Tribunal</h3>
-        {G.round < TRIBUNAL_FROM_ROUND ? (
-          <p className="muted small">The Tribunal opens in round {TRIBUNAL_FROM_ROUND}.</p>
-        ) : (
-          <>
-            <p className="small muted">
-              A majority ({Math.floor(G.roster.length / 2) + 1} votes) exposes a player's nation and faction at dusk.
-              Exposing an innocent hands the Iron Pact the win.
-            </p>
-            {others
-              .filter((p) => !G.revealed[p.id])
-              .map((p) => {
-                const count = Object.values(G.votes).filter((v) => v === p.id).length;
-                return (
-                  <div key={p.id} className="row" style={{ marginBottom: 4 }}>
-                    <button className={myVote === p.id ? 'primary' : ''} onClick={() => moves.vote(myVote === p.id ? null : p.id)}>
-                      {myVote === p.id ? '✓ ' : ''}Accuse {p.persona}
-                    </button>
-                    <span className="small muted">{count > 0 ? `${count} vote${count > 1 ? 's' : ''}` : ''}</span>
-                  </div>
-                );
-              })}
-          </>
-        )}
-      </section>
-    </>
-  );
-}
-
-function NightActions({ G, me, moves, playerID, selected, setSelected }: ActionsProps) {
-  const [paid, setPaid] = useState<Partial<Hand>>({});
-  const [good, setGood] = useState<Resource | ''>('');
-  const [suspect, setSuspect] = useState('');
-  useEffect(() => {
-    setPaid({});
-    setGood('');
-    setSuspect('');
-  }, [selected]);
-
-  const targets = G.nationOrder.filter((n) => n !== me.nation);
-  const route = selected ? findRoute(G, me.nation, selected) : undefined;
-  const pending = selected
-    ? G.envoys.some(
-        (e) =>
-          e.status === 'pending' &&
-          ((e.from === me.nation && e.to === selected) || (e.from === selected && e.to === me.nation)),
-      )
-    : false;
-  const tradeable = route
-    ? [...new Set([...G.nations[me.nation]!.resources, ...G.nations[selected!]!.resources])].filter((g) => !route.goods.includes(g))
-    : [];
-  const describe = (plan: PlayerSecret['plans'][number]) =>
-    plan.kind === 'envoy'
-      ? `✉️ Envoy to ${icon(G, plan.to)} (paid ${formatGoods(plan.paid)})`
-      : plan.kind === 'route'
-        ? `🤝 Open ${RESOURCE_INFO[plan.good].label} trade with ${icon(G, plan.with)} (paid ${formatGoods(plan.paid)})`
-        : `🕵️ Spy: is ${icon(G, plan.nation)} ruled by ${G.roster.find((p) => p.id === plan.suspect)!.persona}? (${plan.gold}g)`;
-
-  return (
-    <>
-      <p className="muted small">
-        Night actions are secret. The morning news reports them by nation icon, never by player.
-      </p>
-
-      {me.plans.length > 0 && (
-        <section>
-          <h3>Tonight's orders</h3>
+        <GoldCard gold={me.gold} />
+        <div className="orders">
+          {phase === 'night' && me.plans.length === 0 && <span className="small muted">No orders tonight yet</span>}
           {me.plans.map((p, i) => (
-            <div key={i} className="item row" style={{ justifyContent: 'space-between' }}>
-              <span>{describe(p)}</span>
-              <button className="tiny" onClick={() => moves.cancelPlan(i)}>Undo</button>
-            </div>
+            <span key={i} className="order">
+              {p.kind === 'envoy' && <>✉️ Envoy ➜ {nationIcon(G, p.to)}</>}
+              {p.kind === 'route' && <>🤝 {RESOURCE_INFO[p.good].emoji} trade ➜ {nationIcon(G, p.with)}</>}
+              {p.kind === 'spy' && <>🕵️ {nationIcon(G, p.nation)} = <Avatar persona={personaOf(G, p.suspect).persona} size={20} />?</>}
+              <button className="tiny ghost" onClick={() => moves.cancelPlan(i)} title="Cancel and get your cards back">✕</button>
+            </span>
           ))}
-        </section>
+        </div>
+      </footer>
+
+      {panel === 'trade' && <TradeModal G={G} me={me} playerID={playerID!} moves={moves} onClose={() => setPanel(null)} />}
+      {panel === 'market' && <MarketModal G={G} me={me} moves={moves} onClose={() => setPanel(null)} />}
+      {panel === 'tribunal' && <TribunalModal G={G} playerID={playerID!} moves={moves} onClose={() => setPanel(null)} />}
+      {panel === 'identity' && <IdentityModal G={G} me={me} onClose={() => setPanel(null)} />}
+      {panel === 'players' && <PlayersModal G={G} onClose={() => setPanel(null)} />}
+      {panel === 'news' && (
+        <NewsArchive
+          G={G}
+          onOpenLatest={() => {
+            setPanel(null);
+            setForcePaper(true);
+          }}
+          onClose={() => setPanel(null)}
+        />
       )}
 
-      <section>
-        <h3>Choose a nation</h3>
-        <div className="row">
-          {targets.map((n) => (
-            <button key={n} className={selected === n ? 'primary' : ''} onClick={() => setSelected(n)}>
-              {G.nations[n]!.icon}
-            </button>
-          ))}
-        </div>
-        {!selected || selected === me.nation ? (
-          <p className="small muted" style={{ marginTop: 8 }}>Pick a nation here or on the map.</p>
-        ) : (
-          <div className="item stack" style={{ marginTop: 8 }}>
-            <b>
-              {icon(G, selected)}: produces {G.nations[selected]!.resources.map((r) => RESOURCE_INFO[r].emoji).join(' ')}
-            </b>
-            {!route && !pending && (
-              <>
-                <span className="small">
-                  Send an envoy: pay any {COST.envoy} resources. If they accept, they learn who you are.
-                </span>
-                <GoodsPicker value={paid} onChange={setPaid} max={me.hand} total={COST.envoy} />
-                <button
-                  disabled={handTotal(paid) !== COST.envoy || me.plans.some((p) => p.kind === 'envoy' && p.to === selected)}
-                  onClick={() => {
-                    moves.planEnvoy(selected, clean(paid));
-                    setPaid({});
-                  }}
-                >
-                  ✉️ Send envoy
-                </button>
-              </>
-            )}
-            {pending && <span className="small muted">An envoy between you is already waiting for an answer.</span>}
-            {route && (
-              <>
-                <span className="small">
-                  Connected{route.goods.length ? `, trading ${route.goods.map((g) => RESOURCE_INFO[g].emoji).join('')}` : ''}. Open trade in a
-                  good: pay any {COST.route} resources. Whenever one of you harvests it, the other gets 1 too.
-                </span>
-                {tradeable.length === 0 ? (
-                  <span className="small muted">Every good between you is already traded.</span>
-                ) : (
-                  <>
-                    <select value={good} onChange={(e) => setGood(e.target.value as Resource)}>
-                      <option value="">Choose a good…</option>
-                      {tradeable.map((g) => (
-                        <option key={g} value={g}>
-                          {RESOURCE_INFO[g].emoji} {RESOURCE_INFO[g].label}
-                        </option>
-                      ))}
-                    </select>
-                    <GoodsPicker value={paid} onChange={setPaid} max={me.hand} total={COST.route} />
-                    <button
-                      disabled={!good || handTotal(paid) !== COST.route}
-                      onClick={() => {
-                        moves.planRoute(selected, good, clean(paid));
-                        setPaid({});
-                        setGood('');
-                      }}
-                    >
-                      🤝 Open trade
-                    </button>
-                  </>
-                )}
-              </>
-            )}
-            <hr style={{ borderColor: 'var(--line)', width: '100%' }} />
-            <span className="small">
-              Spy ({COST.spyGold} gold, you have {me.gold}): ask whether a player rules {G.nations[selected]!.icon}.
-            </span>
-            <div className="row">
-              <select value={suspect} onChange={(e) => setSuspect(e.target.value)}>
-                <option value="">Suspect…</option>
-                {G.roster
-                  .filter((p) => p.id !== playerID)
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.persona}
-                    </option>
-                  ))}
-              </select>
-              <button disabled={!suspect || me.gold < COST.spyGold} onClick={() => moves.planSpy(selected, suspect)}>
-                🕵️ Send spies
-              </button>
+      {welcome && (
+        <Welcome
+          G={G}
+          me={me}
+          onClose={() => {
+            markWelcome();
+            setWelcome(false);
+          }}
+        />
+      )}
+      {showPaper && (
+        <MorningPaper
+          G={G}
+          me={me}
+          onClose={() => {
+            setPaperSeen(G.news.length);
+            setForcePaper(false);
+          }}
+        />
+      )}
+      {showVerdict && <VerdictOverlay G={G} onClose={() => setVerdictSeen(G.verdicts.length)} />}
+      {reveal && (
+        <Modal icon="🔓" title="Secret uncovered" onClose={() => setRevealQueue((q) => q.slice(1))}>
+          <div className="reveal">
+            <div className="center" style={{ gap: 16, margin: '8px 0 14px' }}>
+              <div className="seal" style={{ width: 90, height: 90, fontSize: 52, margin: 0 }}>{nationIcon(G, reveal)}</div>
+              <span style={{ fontSize: 28 }}>=</span>
+              {me.known[reveal] === 'bot' ? (
+                <span style={{ fontSize: 52 }}>🤖</span>
+              ) : (
+                <Avatar persona={personaOf(G, me.known[reveal]!).persona} size={80} />
+              )}
             </div>
+            <h2>
+              {nationName(G, reveal)} is ruled by{' '}
+              {me.known[reveal] === 'bot' ? 'nobody (a bot nation)' : personaOf(G, me.known[reveal]!).persona}
+            </h2>
+            <p className="muted small">Only you know this. It's saved under 🎭 your secret.</p>
+            <button className="primary" onClick={() => setRevealQueue((q) => q.slice(1))}>Got it</button>
           </div>
-        )}
-      </section>
-
-      <section>
-        <h3>Your hand</h3>
-        <HandView hand={me.hand} />
-      </section>
-    </>
-  );
-}
-
-// ---------- Dossier / News / Table ----------
-
-function Dossier({ G, me }: { G: GState; me: PlayerSecret }) {
-  const known = Object.entries(me.known).filter(([n]) => n !== me.nation) as [NationId, string][];
-  return (
-    <div className="stack">
-      <div className="card identity">
-        <h2>
-          {icon(G, me.nation)} · {FACTION_INFO[me.faction].label}
-        </h2>
-        <p className="small">{FACTION_INFO[me.faction].goal}</p>
-        <p className="small muted">Keep this screen to yourself.</p>
-      </div>
-      <section>
-        <h3>Treasury: {me.gold} gold</h3>
-        <HandView hand={me.hand} />
-      </section>
-      <section>
-        <h3>What you know</h3>
-        {known.length === 0 && <p className="muted small">Nothing yet. Accept envoys or send spies to learn who rules what.</p>}
-        {known.map(([n, who]) => (
-          <div key={n} className="item small">
-            {icon(G, n)}: {who === 'bot' ? 'no player' : G.roster.find((p) => p.id === who)!.persona}
-          </div>
-        ))}
-      </section>
-      <section>
-        <h3>Private dispatches</h3>
-        {[...me.inbox].reverse().map((m, i) => (
-          <div key={i} className="item secret small">
-            <span className="muted">R{m.round} · </span>
-            {m.text}
-          </div>
-        ))}
-      </section>
-    </div>
-  );
-}
-
-function News({ G }: { G: GState }) {
-  const rounds = [...new Set([...G.news.map((n) => n.round), ...G.publicLog.map((l) => l.round)])].sort((a, b) => b - a);
-  return (
-    <div>
-      {rounds.map((r) => {
-        const morning = G.news.find((n) => n.round === r);
-        const day = G.publicLog.filter((l) => l.round === r);
-        return (
-          <div key={r} className="news-round">
-            {day.length > 0 && (
-              <>
-                <h3>Round {r}: by day</h3>
-                <ul>{day.map((l, i) => <li key={i}>{l.text}</li>)}</ul>
-              </>
-            )}
-            {morning && (
-              <>
-                <h3>{r === 0 ? 'Prologue' : `📰 Morning news after night ${r}`}</h3>
-                <ul>{morning.items.map((t, i) => <li key={i}>{t}</li>)}</ul>
-              </>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function TableView({ G }: { G: GState }) {
-  return (
-    <div className="stack">
-      <p className="small muted">The surface layer: everyone knows who's at the table. Nobody knows who rules what.</p>
-      {G.roster.map((p) => {
-        const rev = G.revealed[p.id];
-        return (
-          <div key={p.id} className="item">
-            <b>{p.persona}</b> <span className="muted">({p.name})</span>
-            {rev && (
-              <div className="small">
-                Exposed: rules {icon(G, rev.nation)}, {FACTION_INFO[rev.faction].label}
-              </div>
-            )}
-          </div>
-        );
-      })}
-      <h3>Nations</h3>
-      {G.nationOrder.map((n) => (
-        <div key={n} className="item small">
-          {icon(G, n)}: {G.nations[n]!.resources.map((r) => `${RESOURCE_INFO[r].emoji} ${RESOURCE_INFO[r].label}`).join(', ')}
-        </div>
-      ))}
+        </Modal>
+      )}
+      {G.result && <Result G={G} playerID={playerID!} />}
     </div>
   );
 }
@@ -484,19 +279,28 @@ function Result({ G, playerID }: { G: GState; playerID: string }) {
   const won = r.winners.includes(mine.faction);
   return (
     <div className="overlay">
-      <div className="card stack">
-        <h1>{won ? '🏆 Victory' : '💀 Defeat'}</h1>
+      <div className="modal wide reveal">
+        <div style={{ fontSize: 70 }}>{won ? '🏆' : '💀'}</div>
+        <h1>{won ? 'Victory' : 'Defeat'}</h1>
         <p>{r.reason}</p>
-        <h3>Who was who</h3>
-        {G.roster.map((p) => {
-          const s = G.players[p.id];
-          return (
-            <div key={p.id} className="item">
-              <b>{p.persona}</b> ({p.name}): {icon(G, s.nation)}, {FACTION_INFO[s.faction].label}
-            </div>
-          );
-        })}
-        <p className="small muted">Unruled nations: {G.nationOrder.filter((n) => G.owners[n] === 'bot').map((n) => G.nations[n]!.icon).join(' ')}</p>
+        <h3>The masks come off</h3>
+        <div className="pick-grid center">
+          {G.roster.map((p) => {
+            const s = G.players[p.id];
+            return (
+              <div key={p.id} className="pickable" style={{ cursor: 'default', minWidth: 110 }}>
+                <Avatar persona={p.persona} size={44} />
+                <b className="small">{p.persona}</b>
+                <span style={{ fontSize: 26 }}>{nationIcon(G, s.nation)}</span>
+                <span className={`faction-tag faction-${s.faction} small`} style={{ margin: 0 }}>{FACTION_INFO[s.faction].label}</span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="small muted" style={{ marginTop: 12 }}>
+          Bot nations: {G.nationOrder.filter((n) => G.owners[n] === 'bot').map((n) => nationIcon(G, n)).join(' ') || 'none'}
+        </p>
+        <a href="#/">Back to the lobby</a>
       </div>
     </div>
   );
