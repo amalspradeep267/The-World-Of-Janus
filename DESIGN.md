@@ -22,7 +22,7 @@ Day actions are signed with your name. Night actions are reported by city only. 
 The Syndicate alone can use the 🕶️ black market.
 
 ### 🟡 Free Trader: a title, not a faction
-Anyone, Syndicate or Concord, whose city reaches **7 trade routes** (goods opened on its connections; the maximum is 8) earns the **Free Trader** title at the end of that night. It's permanent and **secret**: only the holder is told, because routes are visible on the map and naming the holder would point at their city. The title grants the **Tribunal veto**. It doesn't change your faction or how you win. A big trade empire is expensive and conspicuous, so whoever builds one starts to look like the Syndicate. Unruled **bot cities** fill out the map so small groups still have plenty to work out:
+Anyone, Syndicate or Concord, whose city reaches **7 supply lines** (goods opened on its connections; the maximum is 8) earns the **Free Trader** title at the end of that night. It's permanent and **secret**: only the holder is told, because supply lines are visible on the map and naming the holder would point at their city. The title grants the **Tribunal veto**. It doesn't change your faction or how you win. A big trade empire is expensive and conspicuous, so whoever builds one starts to look like the Syndicate. Unruled **bot cities** fill out the map so small groups still have plenty to work out:
 
 | Players | Syndicate | Concord | Cities on map | Concord pairs |
 |---|---|---|---|---|
@@ -42,7 +42,8 @@ Anyone, Syndicate or Concord, whose city reaches **7 trade routes** (goods opene
    - **⚖️ Tribunal** (from round 3): see below.
 3. **🌙 Night (secret, by city).**
    - **✉️ Envoy** (🌾 Grain + 🐑 Wool, plus travel gold): ask another city for a connection. If they accept, they alone learn who sent it. Unanswered envoys expire after a day and a night.
-   - **🤝 Open trade** (🪵 Timber + 🪨 Stone, plus travel gold): pick a good on an existing connection. From then on, whenever either city harvests it, the other gets 1 too.
+   - **🤝 Open a supply line** (🪵 Timber + 🪨 Stone, plus travel gold): pick a good on an existing connection. From then on, whenever either city produces it, the other gets 1 too. *(Not to be confused with day-time trades, which are free one-off swaps between players.)*
+   - **🏭 Build a factory** (⛏️ Ore + 🔥 Coal, your own city): it makes a resource your city doesn't produce naturally, **2 every dawn** from the next morning. One per tile, so at most 3 per city. Factories show on the map and in the news, and their output counts as a harvest, so it flows down supply lines too.
    - **🕵️ Spies** (12 gold): report one city's **total gold received and total gold spent** that round. No breakdown and no identities: players do the maths against the public sales.
    - **🕶️ Black market (Syndicate only):** **Smuggle** one card for 1.5× its price, or **Pump** a resource's price for 6 gold.
    - **🗡️ Kidnap (Syndicate only, 15 gold, one per night):** see below.
@@ -50,8 +51,8 @@ Anyone, Syndicate or Concord, whose city reaches **7 trade routes** (goods opene
 4. **📰 Morning news.** Every night action, listed by city in shuffled order, plus market moves. Everyone gets the newspaper.
 
 ### Limits and distance
-- Each city can have at most **4 connections**, and each connection at most **2 traded goods**.
-- **Distance costs gold.** Envoys and trade routes cost 2 gold per hex between the two capitals beyond the first 2 hexes, up to about 8 gold across the map. Travel gold shows up in spy reports.
+- Each city can have at most **4 connections**, and each connection at most **2 supply lines** (goods).
+- **Distance costs gold.** Envoys and supply lines cost 2 gold per hex between the two capitals beyond the first 2 hexes, up to about 8 gold across the map. Travel gold shows up in spy reports.
 - Everyone's **card count** (not which cards) is public. It updates at dawn and after public trades or sales, never mid-night.
 
 ## Money and markets
@@ -109,10 +110,11 @@ Without a reason to hide, the Concord could simply announce their cities to each
 - [x] **M1.5: Economy.** Recipes, black market, route caps, card counts, sound cues, quit to home
 - [x] **M1.6:** Relative pricing, whole-number gold, treasury spies, the Syndicate, tariffs, player names, map panning
 - [x] **M1.7:** Distance costs, paid Tribunal with fines, host setting for anonymous exposure
-- [x] **M1.8:** Free Trader becomes a secret title (7 trade routes) that grants the veto; two factions only
+- [x] **M1.8:** Free Trader becomes a secret title (7 supply lines) that grants the veto; two factions only
 - [x] **M1.9:** One d12 for harvests (equal odds); clearer "You" marker
 - [x] **M1.10:** Kidnapping (Syndicate); clearer trade card picker
 - [x] **M1.11:** Spy reports show totals only; hired security for the Syndicate; kidnapping takes a citizen
+- [x] **M1.12:** "Trade routes" renamed **supply lines**; 🏭 factories (Ore + Coal, 2 per dawn, max 3 per city)
 - [ ] **M2: Arms and War.** Weapons need ⛏️ Ore + 🔥 Coal **and gold** (money pays for armies); forts need stone and timber; attacks are dice plus weapons vs forts plus secret ally support. Hoarding war materials is a tell. The Syndicate's active win becomes conquest.
 - [ ] **M3: Nobody sits out.** A conquered player becomes a *Government in Exile*: still wins with their faction, still votes, and can sabotage occupiers.
 - [ ] Phase timers, host reconnect and saved state.

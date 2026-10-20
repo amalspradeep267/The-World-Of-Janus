@@ -28,8 +28,8 @@ export type NationId = (typeof NATIONS)[number]['id'];
 export type Faction = 'syndicate' | 'concord';
 
 /**
- * 🟡 Free Trader is a title, not a faction: anyone whose city has this many trade
- * routes (goods opened on its connections) earns it. It's secret and grants the Tribunal veto.
+ * 🟡 Free Trader is a title, not a faction: anyone whose city has this many supply
+ * lines (goods opened on its connections) earns it. It's secret and grants the Tribunal veto.
  */
 export const FREE_TRADER_ROUTES = 7;
 /** The Tribunal opens on this round. */
@@ -91,10 +91,17 @@ export const MIN_PRICE = 2;
  * Night action recipes. Each city produces only 3 of the 7 resources, so most
  * players must trade by day (publicly) or smuggle at night (expensively) to act.
  */
-export const RECIPE: Record<'envoy' | 'route', Partial<Record<Resource, number>>> = {
+export const RECIPE: Record<'envoy' | 'route' | 'factory', Partial<Record<Resource, number>>> = {
   envoy: { grain: 1, wool: 1 },
-  route: { timber: 1, stone: 1 },
+  route: { timber: 1, stone: 1 }, // a supply line
+  factory: { ore: 1, coal: 1 },
 };
+
+/**
+ * 🏭 Factories (night, your own city): make a resource your city doesn't produce naturally,
+ * `yield` of it every dawn, from the dawn after it's built. One per tile, so up to `maxPerCity`.
+ */
+export const FACTORY = { yield: 2, maxPerCity: 3 };
 /** Spies report one city's treasury for the round: total gold received, and total gold spent. */
 export const COST = { spyGold: 12 };
 
@@ -116,11 +123,11 @@ export const PUMP = { gold: 6, units: 4 };
  */
 export const KIDNAP = { gold: 15, ransom: 5 };
 
-/** Trade route limits. */
+/** Supply line limits (in code, a connection's goods are its "routes"). */
 export const MAX_GOODS_PER_ROUTE = 2;
 export const MAX_ROUTES_PER_CITY = 4;
 
-/** Envoys and trade routes to far-away cities cost extra gold: this much per hex beyond `freeHexes`. */
+/** Envoys and supply lines to far-away cities cost extra gold: this much per hex beyond `freeHexes`. */
 export const DISTANCE = { freeHexes: 2, goldPerHex: 2 };
 
 /** Bot behaviour per night. */

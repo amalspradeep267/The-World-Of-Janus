@@ -1,7 +1,7 @@
 import { Client } from 'boardgame.io/client';
 import { Local } from 'boardgame.io/multiplayer';
 import { describe, expect, it } from 'vitest';
-import { COST, DISTANCE, KIDNAP, SECURITY, MAX_GOODS_PER_ROUTE, MAX_ROUNDS, MAX_ROUTES_PER_CITY, PUMP, RECIPE, RESOURCES, SETUP_TABLE, TARIFF, TRIBUNAL, type Resource } from './constants';
+import { COST, DISTANCE, FACTORY, KIDNAP, SECURITY, MAX_GOODS_PER_ROUTE, MAX_ROUNDS, MAX_ROUTES_PER_CITY, PUMP, RECIPE, RESOURCES, SETUP_TABLE, TARIFF, TRIBUNAL, type Resource } from './constants';
 import { cityDistance, distanceGold, findRoute, handTotal, hasGoods, makeGame, routeCount, smugglePrice } from './game';
 import type { GState, Hand } from './types';
 
@@ -473,5 +473,54 @@ describe('The World of Janus', () => {
     const c = seats(clients).findIndex((p) => p.faction === 'concord');
     clients[c].moves.hireSecurity(true);
     expect(view(clients[c]).players[String(c)].security).toBe(0);
+  });
+
+  // ---------- factories ----------
+
+  /** A 3-player match where player 0 starts with plenty of Ore and Coal. */
+  function factoryMatch() {
+    const base = makeGame(['P0', 'P1', 'P2']);
+    const game = {
+      ...base,
+      setup: (ctx: any) => {
+        const G = (base.setup as any)(ctx) as GState;
+        G.players['0'].hand.ore += 6;
+        G.players['0'].hand.coal += 6;
+        return G;
+      },
+    };
+    const multiplayer = Local();
+    const matchID = `factory-${Math.random()}`;
+    const clients = [0, 1, 2].map((i) => Client({ game, numPlayers: 3, playerID: String(i), multiplayer, matchID }));
+    clients.forEach((c) => c.start());
+    return clients;
+  }
+
+  it('builds a factory that makes a foreign resource every dawn', () => {
+    const clients = factoryMatch();
+    allReady(clients); // -> night 1
+    const G = view(clients[0]);
+    const nation = G.players['0'].nation;
+    const native = G.nations[nation]!.resources;
+    const good = RESOURCES.find((r) => !native.includes(r))!;
+    clients[0].moves.planFactory(native[0]); // can't manufacture what you already produce
+    expect(view(clients[0]).players['0'].plans).toHaveLength(0);
+    clients[0].moves.planFactory(good);
+    expect(view(clients[0]).players['0'].plans).toHaveLength(1);
+    allReady(clients); // -> day 2: built overnight, produces at this dawn
+    const after = view(clients[0]);
+    expect(after.nations[nation]!.factories).toEqual([{ tile: expect.any(Number), good }]);
+    expect(after.players['0'].harvest.land[good]).toBe(FACTORY.yield);
+    expect(after.news.at(-1)!.items.some((i) => i.t === 'factory')).toBe(true);
+  });
+
+  it('allows at most three factories per city', () => {
+    const clients = factoryMatch();
+    allReady(clients); // -> night 1
+    const G = view(clients[0]);
+    const native = G.nations[G.players['0'].nation]!.resources;
+    const foreign = RESOURCES.filter((r) => !native.includes(r));
+    for (const r of foreign) clients[0].moves.planFactory(r);
+    expect(view(clients[0]).players['0'].plans.filter((p) => p.kind === 'factory')).toHaveLength(FACTORY.maxPerCity);
   });
 });

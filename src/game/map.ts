@@ -108,7 +108,7 @@ export function generateMap(rng: Rng, nationCount: number, radius: number) {
       tiles[tileIdx].resource = resources[k];
       tiles[tileIdx].number = numbers[k];
     });
-    nations[meta.id] = { id: meta.id, icon: meta.icon, name: meta.name, tiles: reg, resources };
+    nations[meta.id] = { id: meta.id, icon: meta.icon, name: meta.name, tiles: reg, resources, factories: [] };
   });
 
   return { tiles, nations, nationOrder: nationIds };

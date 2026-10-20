@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import {
   COST,
+  FACTORY,
   FACTION_INFO,
   KIDNAP,
   MAX_GOODS_PER_ROUTE,
   MAX_ROUTES_PER_CITY,
   RECIPE,
+  RESOURCES,
   RESOURCE_INFO,
   type NationId,
   type Resource,
@@ -24,7 +26,7 @@ interface Props {
   onClose: () => void;
 }
 
-type Mode = null | 'trade' | 'kidnap';
+type Mode = null | 'trade' | 'kidnap' | 'factory';
 
 export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: Props) {
   const [mode, setMode] = useState<Mode>(null);
@@ -66,6 +68,15 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
         : shortOfGold
           ? `It's far away: you need ${travel} gold for the journey.`
           : null;
+  const factoryPlans = me.plans.filter((p) => p.kind === 'factory').length;
+  const factoryMissing = missingFor(me.hand, RECIPE.factory);
+  const factoryChoices = RESOURCES.filter((r) => !n.resources.includes(r));
+  const factoryBlock =
+    n.factories.length + factoryPlans >= FACTORY.maxPerCity
+      ? `Your city already has ${FACTORY.maxPerCity} factories (the maximum).`
+      : factoryMissing.length
+        ? `Missing ${factoryMissing.map((r) => RESOURCE_INFO[r].emoji).join(' ')}: trade for it by day${canSmuggle ? ' or 🕶️ smuggle it' : ''}.`
+        : null;
   const routeBlock = goodsFull
     ? `This connection already carries ${MAX_GOODS_PER_ROUTE} goods (the maximum).`
     : routeMissing.length
@@ -73,7 +84,7 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
       : tradeable.length === 0
         ? 'Every good between you is already traded.'
         : shortOfGold
-          ? `It's far away: you need ${travel} gold to ship goods there.`
+          ? `It's far away: you need ${travel} gold to run a supply line there.`
           : null;
 
   const ruler = mine ? (
@@ -109,21 +120,58 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
         🔗 {routeCount(G, nation)}/{MAX_ROUTES_PER_CITY} connections
         {!mine && (
           <>
-            {' · '}📏 {hexes} hexes away{travel > 0 ? ` · envoys & trade cost +🪙${travel}` : ' · no travel cost'}
+            {' · '}📏 {hexes} hexes away{travel > 0 ? ` · envoys & supply lines cost +🪙${travel}` : ' · no travel cost'}
           </>
         )}
       </p>
       {route && (
         <p className="small">
-          🤝 Connected with you{route.goods.length > 0 && <> · trading {route.goods.map((g) => RESOURCE_INFO[g].emoji).join(' ')}</>}
+          🤝 Connected with you{route.goods.length > 0 && <> · supply lines: {route.goods.map((g) => RESOURCE_INFO[g].emoji).join(' ')}</>}
         </p>
       )}
       {pending && <p className="small">✉️ An envoy is waiting for an answer</p>}
+      {n.factories.length > 0 && (
+        <p className="small">
+          🏭 Factories: {n.factories.map((f) => RESOURCE_INFO[f.good].emoji).join(' ')}{' '}
+          <span className="muted">(+{FACTORY.yield} each every dawn)</span>
+        </p>
+      )}
 
       {mine ? (
-        <p className="small muted" style={{ marginTop: 12 }}>
-          Your faction: <b>{FACTION_INFO[me.faction].label}</b>. Nobody else knows this city is yours.
-        </p>
+        <>
+          <p className="small muted" style={{ marginTop: 12 }}>
+            Your faction: <b>{FACTION_INFO[me.faction].label}</b>. Nobody else knows this city is yours.
+          </p>
+          {phase === 'day' ? (
+            <p className="small muted">🌙 At night you can build 🏭 factories here.</p>
+          ) : (
+            <>
+              <button className={`action ${mode === 'factory' ? 'chosen' : ''}`} disabled={!!factoryBlock} onClick={() => setMode(mode === 'factory' ? null : 'factory')}>
+                <span className="ai">🏭</span>
+                <span>
+                  <b>Build a factory</b>
+                  <span>{factoryBlock ?? `Make a resource your city doesn't produce: ${FACTORY.yield} every dawn. Everyone will see it on the map.`}</span>
+                </span>
+                <Recipe recipe={RECIPE.factory} hand={me.hand} />
+              </button>
+              {mode === 'factory' && (
+                <div className="row" style={{ marginTop: 8 }}>
+                  {factoryChoices.map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => {
+                        moves.planFactory(g);
+                        setMode(null);
+                      }}
+                    >
+                      {RESOURCE_INFO[g].emoji} {RESOURCE_INFO[g].label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </>
       ) : phase === 'day' ? (
         <p className="small muted" style={{ marginTop: 12 }}>🌙 You can act on this city at night.</p>
       ) : (
@@ -148,8 +196,8 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
             <button className={`action ${mode === 'trade' ? 'chosen' : ''}`} disabled={!!routeBlock} onClick={() => setMode(mode === 'trade' ? null : 'trade')}>
               <span className="ai">🤝</span>
               <span>
-                <b>Open a trade route</b>
-                <span>{routeBlock ?? 'Pick a good. Whenever one of you harvests it, the other gets 1 too.'}</span>
+                <b>Open a supply line</b>
+                <span>{routeBlock ?? 'Pick a good. Whenever one of you produces it, the other gets 1 too.'}</span>
               </span>
               <span className="cost">
                 <Recipe recipe={RECIPE.route} hand={me.hand} />

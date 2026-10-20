@@ -5,6 +5,7 @@ import {
   BOT,
   COST,
   DISTANCE,
+  FACTORY,
   DICE_YIELD,
   DIE_SIDES,
   FACTION_INFO,
@@ -70,7 +71,7 @@ export function cityDistance(G: GState, a: NationId, b: NationId) {
   return hexDistance(ta, tb);
 }
 
-/** Extra gold for an envoy or trade route between two cities, growing with distance. */
+/** Extra gold for an envoy or supply line between two cities, growing with distance. */
 export const distanceGold = (G: GState, a: NationId, b: NationId) =>
   Math.max(0, cityDistance(G, a, b) - DISTANCE.freeHexes) * DISTANCE.goldPerHex;
 
@@ -125,7 +126,7 @@ const pendingBetween = (G: GState, x: NationId, y: NationId) =>
 
 const humans = (G: GState) => G.roster.map((p) => p.id);
 
-/** Trade routes a city has: every good opened on any of its connections. */
+/** Supply lines a city has: every good opened on any of its connections. */
 export function tradeRouteCount(G: GState, n: NationId) {
   return G.routes.filter((rt) => rt.a === n || rt.b === n).reduce((s, rt) => s + rt.goods.length, 0);
 }
@@ -155,10 +156,11 @@ function startDay({ G, random }: { G: GState; random: Rng & { Die(sides: number)
       const hits = G.rolls.filter((roll) => roll === tile.number).length;
       g[tile.resource!] += hits * DICE_YIELD;
     }
+    for (const f of G.nations[n]!.factories) g[f.good] += FACTORY.yield;
     gains[n] = g;
     for (const r of RESOURCES) if (g[r]) addSupply(G, r, g[r]);
   }
-  // Open trade routes: whenever your partner harvests a traded good, you receive one too.
+  // Supply lines: whenever your partner harvests (or manufactures) a shared good, you receive one too.
   const bonus: Partial<Record<NationId, Hand>> = Object.fromEntries(G.nationOrder.map((n) => [n, emptyHand()]));
   for (const rt of G.routes) {
     for (const good of rt.goods) {
@@ -173,7 +175,7 @@ function startDay({ G, random }: { G: GState; random: Rng & { Die(sides: number)
     const b = bonus[p.nation]!;
     for (const r of RESOURCES) p.hand[r] += g[r] + b[r];
     p.harvest = { land: g, routes: b };
-    const routePart = handTotal(b) > 0 ? ` Trade routes brought in ${formatGoods(b)}.` : '';
+    const routePart = handTotal(b) > 0 ? ` Supply lines brought in ${formatGoods(b)}.` : '';
     p.inbox.push({ round: G.round, text: `Harvest: ${formatGoods(g)}.${routePart}` });
   }
   snapshotHands(G);
@@ -333,6 +335,21 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
       } else if (plan.kind === 'pump') {
         addDemand(G, plan.good, PUMP.units);
         p.inbox.push({ round: G.round, text: `🕶️ Your agents bid up ${RESOURCE_INFO[plan.good].emoji} ${RESOURCE_INFO[plan.good].label}.` });
+      } else if (plan.kind === 'factory') {
+        const n = G.nations[p.nation]!;
+        // Fill the outer tiles before the capital, which is crowded with the city banner.
+        const tile = [...n.tiles.slice(1), n.tiles[0]].find((t) => !n.factories.some((f) => f.tile === t));
+        if (tile === undefined || n.factories.length >= FACTORY.maxPerCity) {
+          refund(p, plan.paid);
+          p.inbox.push({ round: G.round, text: 'There was no room for another factory. Refunded.' });
+          continue;
+        }
+        n.factories.push({ tile, good: plan.good });
+        items.push({ t: 'factory', nation: p.nation, good: plan.good });
+        p.inbox.push({
+          round: G.round,
+          text: `🏭 Your factory is built. It makes ${FACTORY.yield} ${RESOURCE_INFO[plan.good].emoji} ${RESOURCE_INFO[plan.good].label} every dawn.`,
+        });
       } else if (plan.kind === 'kidnap') {
         kidnapOrders.push({ pid, nation: plan.nation, suspect: plan.suspect, gold: plan.gold });
       } else {
@@ -466,14 +483,14 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
   if (Object.keys(G.priceChange).length) news.push({ t: 'market', changes: { ...G.priceChange } });
   G.news.push({ round: G.round, items: news });
 
-  // Award the secret Free Trader title to anyone who now has enough trade routes.
+  // Award the secret Free Trader title to anyone who now has enough supply lines.
   for (const pid of humans(G)) {
     const p = G.players[pid];
     if (!p.freeTrader && tradeRouteCount(G, p.nation) >= FREE_TRADER_ROUTES) {
       p.freeTrader = true;
       p.inbox.push({
         round: G.round,
-        text: `🟡 With ${FREE_TRADER_ROUTES} trade routes you've earned the secret title of Free Trader. You can now veto the Tribunal.`,
+        text: `🟡 With ${FREE_TRADER_ROUTES} supply lines you've earned the secret title of Free Trader. You can now veto the Tribunal.`,
       });
     }
   }
@@ -652,6 +669,20 @@ const planSpy = hostOnly(({ G, playerID }, nation: NationId) => {
 });
 
 const isSyndicate = (p: PlayerSecret | undefined) => p?.faction === 'syndicate';
+
+/** Build a factory in your own city that makes a resource it doesn't produce naturally. */
+const planFactory = hostOnly(({ G, playerID }, good: Resource) => {
+  const p = me(G, playerID);
+  if (!p || !RESOURCES.includes(good)) return INVALID_MOVE;
+  const n = G.nations[p.nation]!;
+  if (n.resources.includes(good)) return INVALID_MOVE;
+  const planned = p.plans.filter((x) => x.kind === 'factory').length;
+  if (n.factories.length + planned >= FACTORY.maxPerCity) return INVALID_MOVE;
+  const paid = { ...RECIPE.factory };
+  if (!hasGoods(p.hand, paid)) return INVALID_MOVE;
+  moveGoods(p.hand, null, paid);
+  p.plans.push({ kind: 'factory', good, paid, gold: 0 });
+});
 
 /** Syndicate only, day or night: hire (or dismiss) security that bribes tonight's spies. */
 const hireSecurity = hostOnly(({ G, playerID }, on: boolean) => {
@@ -835,7 +866,7 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
         onEnd: resolveNight as any,
         endIf: allReady,
         turn: { activePlayers: ActivePlayers.ALL },
-        moves: { setReady, respondEnvoy, planEnvoy, planRoute, planSpy, planSmuggle, planPump, planKidnap, hireSecurity, cancelPlan },
+        moves: { setReady, respondEnvoy, planEnvoy, planRoute, planFactory, planSpy, planSmuggle, planPump, planKidnap, hireSecurity, cancelPlan },
       },
     },
 

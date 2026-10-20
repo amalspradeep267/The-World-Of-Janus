@@ -20,6 +20,8 @@ export interface Nation {
   name: string;
   tiles: number[]; // indexes into G.tiles; first one is the capital
   resources: Resource[];
+  /** Public: factories built on this city's tiles, and what each makes. */
+  factories: { tile: number; good: Resource }[];
 }
 
 /** A connection between two nations, plus the goods they have opened trade in. */
@@ -45,7 +47,8 @@ export type NightPlan =
   | { kind: 'spy'; nation: NationId; gold: number }
   | { kind: 'smuggle'; good: Resource; gold: number }
   | { kind: 'pump'; good: Resource; gold: number }
-  | { kind: 'kidnap'; nation: NationId; suspect: PlayerID; gold: number };
+  | { kind: 'kidnap'; nation: NationId; suspect: PlayerID; gold: number }
+  | { kind: 'factory'; good: Resource; paid: Partial<Hand>; gold: number };
 
 export interface PlayerSecret {
   nation: NationId;
@@ -56,9 +59,9 @@ export interface PlayerSecret {
   known: Partial<Record<NationId, Controller>>;
   inbox: { round: number; text: string }[];
   plans: NightPlan[];
-  /** What this morning's harvest brought: own land, and extra from trade routes. */
+  /** What this morning's harvest brought: own land and factories, and extra from supply lines. */
   harvest: { land: Hand; routes: Hand };
-  /** Holds the secret 🟡 Free Trader title (earned with enough trade routes). */
+  /** Holds the secret 🟡 Free Trader title (earned with enough supply lines). */
   freeTrader: boolean;
   /** Free Traders only: gold set aside for a veto today (0 = not armed). Secret. */
   veto: number;
@@ -101,6 +104,7 @@ export type NewsItem =
   | { t: 'envoy'; from: NationId; to: NationId }
   | { t: 'accepted' | 'declined' | 'expired'; from: NationId; to: NationId }
   | { t: 'route'; a: NationId; b: NationId; good: Resource }
+  | { t: 'factory'; nation: NationId; good: Resource }
   | { t: 'spy'; nation: NationId }
   | { t: 'kidnap'; nation: NationId }
   | { t: 'botched'; kidnapper: PlayerID; nation: NationId; target: NationId }

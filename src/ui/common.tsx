@@ -134,7 +134,7 @@ export function Die({ value, size = 46, rolling, delay = 0 }: { value: number; s
       <polygon points={ring(47, -54)} fill="#d8ccb0" stroke="#b9ab8b" strokeWidth="2" />
       <polygon points={ring(47, -54)} fill="none" stroke="#b9ab8b" strokeWidth="2" transform="rotate(36 50 52)" opacity="0.6" />
       <polygon points={ring(31)} fill="#f7f1e3" stroke="#b9ab8b" strokeWidth="2" />
-      <text x="50" y="61" textAnchor="middle" fontSize="28" fontWeight="800" fontFamily="var(--serif)" fill="#1d1a14">
+      <text x="50" y="61" textAnchor="middle" fontSize="28" fontWeight="800" fontFamily="var(--sans)" fill="#1d1a14">
         {value}
       </text>
     </svg>

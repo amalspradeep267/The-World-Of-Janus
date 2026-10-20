@@ -272,7 +272,7 @@ export function TribunalModal({ G, me, playerID, moves, onClose }: { G: GState; 
           </p>
           {!me.freeTrader && (
             <p className="small muted" style={{ marginTop: 12 }}>
-              🟡 Reach {FREE_TRADER_ROUTES} trade routes to earn the secret Free Trader title, which can veto the Tribunal.
+              🟡 Reach {FREE_TRADER_ROUTES} supply lines to earn the secret Free Trader title, which can veto the Tribunal.
             </p>
           )}
           {me.freeTrader && (
@@ -308,7 +308,7 @@ export function IdentityModal({ G, me, onClose }: { G: GState; me: PlayerSecret;
           {me.freeTrader ? (
             <span className="faction-tag faction-title">🟡 Free Trader: you can veto the Tribunal</span>
           ) : (
-            <>🟡 Trade routes: {tradeRouteCount(G, me.nation)}/{FREE_TRADER_ROUTES} toward the secret Free Trader title</>
+            <>🟡 Supply lines: {tradeRouteCount(G, me.nation)}/{FREE_TRADER_ROUTES} toward the secret Free Trader title</>
           )}
         </p>
         <div className="center" style={{ gap: 6, margin: '8px 0 4px' }}>
@@ -420,7 +420,9 @@ export function NewsArchive({ G, onOpenLatest, onClose }: { G: GState; onOpenLat
                 case 'expired':
                   return <span key={i} title="Envoy ignored">{nationIcon(G, it.to)}🕯️{nationIcon(G, it.from)}</span>;
                 case 'route':
-                  return <span key={i} title="Trade opened">{nationIcon(G, it.a)}{RESOURCE_INFO[it.good].emoji}{nationIcon(G, it.b)}</span>;
+                  return <span key={i} title="Supply line opened">{nationIcon(G, it.a)}{RESOURCE_INFO[it.good].emoji}{nationIcon(G, it.b)}</span>;
+                case 'factory':
+                  return <span key={i} title="Factory opened">{nationIcon(G, it.nation)}🏭{RESOURCE_INFO[it.good].emoji}</span>;
                 case 'spy':
                   return <span key={i} title="Spies spotted">🕵️{nationIcon(G, it.nation)}</span>;
                 case 'kidnap':
@@ -459,9 +461,9 @@ export function Welcome({ G, me, onClose }: { G: GState; me: PlayerSecret; onClo
           <div className="howto">
             <div><span className="hi">🎭</span><b>You rule a city</b><span>in secret. Everyone knows who's playing; nobody knows who rules what.</span></div>
             <div><span className="hi">☀️</span><b>Day</b><span>Talk on Discord. Trade cards openly. Accuse at the ⚖️ Tribunal.</span></div>
-            <div><span className="hi">🌙</span><b>Night</b><span>Click a city on the map to send envoys, open trade or spy. Each action needs specific cards.</span></div>
+            <div><span className="hi">🌙</span><b>Night</b><span>Click a city to send envoys, open supply lines or spy; click your own to build factories. Each needs specific cards.</span></div>
             <div><span className="hi">🔁</span><b>Cover your tracks</b><span>Trade by day for the cards your night plans need. Every trade and sale is public.</span></div>
-            <div><span className="hi">🟡</span><b>Free Trader</b><span>A secret title for whoever builds {FREE_TRADER_ROUTES} trade routes. It can veto the Tribunal.</span></div>
+            <div><span className="hi">🟡</span><b>Free Trader</b><span>A secret title for whoever builds {FREE_TRADER_ROUTES} supply lines. It can veto the Tribunal.</span></div>
             <div><span className="hi">🕵️</span><b>Spies</b><span>report how much gold a city received and spent. Do the maths against the public sales.</span></div>
             <div><span className="hi">📰</span><b>Morning news</b><span>shows what each city did, but never who did it.</span></div>
           </div>

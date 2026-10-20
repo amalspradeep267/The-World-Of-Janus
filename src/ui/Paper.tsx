@@ -35,7 +35,21 @@ function Headline({ G, item }: { G: GState; item: NewsItem }) {
     case 'expired':
       return two(item.to, '🕯️', item.from, 'Envoy ignored', `${nationName(G, item.to)} never answered`);
     case 'route':
-      return two(item.a, RESOURCE_INFO[item.good].emoji, item.b, `${RESOURCE_INFO[item.good].label} trade opened`, 'Goods now flow both ways');
+      return two(item.a, RESOURCE_INFO[item.good].emoji, item.b, `${RESOURCE_INFO[item.good].label} supply line opened`, 'Goods now flow both ways');
+    case 'factory':
+      return (
+        <div className="headline">
+          <span className="who">
+            <Nat G={G} n={item.nation} />
+            <span className="verb">🏭</span>
+            <span className="nat">{RESOURCE_INFO[item.good].emoji}</span>
+          </span>
+          <span className="cap">
+            Factory opens in {nationName(G, item.nation)}
+            <em>It will turn out {RESOURCE_INFO[item.good].label} every morning</em>
+          </span>
+        </div>
+      );
     case 'spy':
       return (
         <div className="headline">
@@ -156,7 +170,7 @@ export function MorningPaper({ G, me, onClose }: { G: GState; me: PlayerSecret; 
               <ResCard key={r} res={r} small gain={land[r] + routes[r]} />
             ))}
           </div>
-          {RESOURCES.some((r) => routes[r] > 0) && <p className="small" style={{ marginTop: 10 }}>🤝 Includes extra from your trade routes.</p>}
+          {RESOURCES.some((r) => routes[r] > 0) && <p className="small" style={{ marginTop: 10 }}>🤝 Includes extra from your supply lines.</p>}
           {dispatches.map((m, i) => (
             <p key={i} className="small" style={{ marginTop: 8 }}>
               📜 {m.text}

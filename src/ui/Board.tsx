@@ -263,9 +263,10 @@ export function Board(props: BoardProps<GState>) {
           {RESOURCES.every((r) => me.hand[r] === 0) && <span className="hand-empty">No cards in hand.</span>}
         </div>
         <GoldCard gold={me.gold} />
-        <div className="recipes" title="What night actions cost">
+        <div className="recipes" title="What night actions cost (day trades are free)">
           <span>✉️ Envoy <Recipe recipe={RECIPE.envoy} hand={me.hand} /></span>
-          <span>🤝 Trade <Recipe recipe={RECIPE.route} hand={me.hand} /></span>
+          <span>🤝 Supply line <Recipe recipe={RECIPE.route} hand={me.hand} /></span>
+          <span>🏭 Factory <Recipe recipe={RECIPE.factory} hand={me.hand} /></span>
           <span>🕵️ Spies <span className="cost">🪙{COST.spyGold}</span></span>
         </div>
         <div className="orders">
@@ -279,7 +280,8 @@ export function Board(props: BoardProps<GState>) {
           {me.plans.map((p, i) => (
             <span key={i} className="order">
               {p.kind === 'envoy' && <>✉️ Envoy ➜ {nationIcon(G, p.to)}</>}
-              {p.kind === 'route' && <>🤝 {RESOURCE_INFO[p.good].emoji} trade ➜ {nationIcon(G, p.with)}</>}
+              {p.kind === 'route' && <>🤝 {RESOURCE_INFO[p.good].emoji} supply line ➜ {nationIcon(G, p.with)}</>}
+              {p.kind === 'factory' && <>🏭 Factory making {RESOURCE_INFO[p.good].emoji}</>}
               {p.kind === 'spy' && <>🕵️ Spy on {nationIcon(G, p.nation)}'s treasury</>}
               {p.kind === 'smuggle' && <>🕶️ Smuggle {RESOURCE_INFO[p.good].emoji}</>}
               {p.kind === 'pump' && <>🕶️ Pump {RESOURCE_INFO[p.good].emoji} ▲</>}

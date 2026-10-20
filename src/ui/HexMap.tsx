@@ -133,6 +133,23 @@ export function HexMap({ G, myNation, selected, onSelect }: Props) {
               {RESOURCE_INFO[t.resource!].emoji}
             </text>
             {(() => {
+              const f = G.nations[t.nation]!.factories.find((x) => x.tile === i);
+              if (!f) return null;
+              // On a capital the banner fills the middle, so the badge sits at the top-left instead.
+              const capital = G.nations[t.nation]!.tiles[0] === i;
+              const bx = x - 34;
+              const by = capital ? y - 30 : y - 9;
+              return (
+                <g pointerEvents="none">
+                  <title>Factory making {RESOURCE_INFO[f.good].label}</title>
+                  <rect x={bx} y={by} width={30} height={18} rx={6} fill="#12141a" stroke="var(--gold)" strokeWidth={1.2} />
+                  <text x={bx + 15} y={by + 13} textAnchor="middle" fontSize="11">
+                    🏭{RESOURCE_INFO[f.good].emoji}
+                  </text>
+                </g>
+              );
+            })()}
+            {(() => {
               // On a capital the nation banner sits in the middle, so the token moves aside.
               const isCapital = G.nations[t.nation]!.tiles[0] === i;
               const tx = isCapital ? x + 22 : x;
@@ -165,7 +182,7 @@ export function HexMap({ G, myNation, selected, onSelect }: Props) {
         });
       })}
 
-      {/* Trade routes and envoys in flight */}
+      {/* Supply lines and envoys in flight */}
       {G.routes.map((rt, i) => {
         const a = capital(rt.a);
         const b = capital(rt.b);
