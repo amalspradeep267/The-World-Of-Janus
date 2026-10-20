@@ -114,11 +114,8 @@ export function MorningPaper({ G, me, onClose }: { G: GState; me: PlayerSecret; 
           <h3>🔒 For your eyes only</h3>
           <div className="row" style={{ alignItems: 'center', gap: 14 }}>
             <span className="row">
-              {G.dice.map(([a, b], i) => (
-                <span key={i} className="row" style={{ gap: 4 }}>
-                  <Die value={a} size={34} />
-                  <Die value={b} size={34} />
-                </span>
+              {G.rolls.map((n, i) => (
+                <Die key={i} value={n} size={40} />
               ))}
             </span>
             <span className="small">Today's harvest:</span>

@@ -123,8 +123,7 @@ export interface GState {
   routes: Route[];
   envoys: Envoy[];
   round: number;
-  /** This morning's dice, one pair per harvest roll, and their sums. */
-  dice: [number, number][];
+  /** This morning's d12 rolls; tiles with a rolled number produce. */
   rolls: number[];
   prices: Record<Resource, number>;
   priceChange: Partial<Record<Resource, number>>;

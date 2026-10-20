@@ -8,6 +8,7 @@
   --muted: #9aa0b8;
   --gold: #e3b04b;
   --gold-soft: #e3b04b33;
+  --accent: var(--gold);
   --good: #63c174;
   --bad: #e26a6a;
   --night: #8fa2ff;

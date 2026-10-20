@@ -6,6 +6,7 @@ import {
   COST,
   DISTANCE,
   DICE_YIELD,
+  DIE_SIDES,
   FACTION_INFO,
   HARVEST_ROLLS,
   MAP_RADIUS,
@@ -128,7 +129,7 @@ const finalResult = (winners: Faction[], reason: string): GameResult => ({ winne
 
 // ---------- phase hooks ----------
 
-function startDay({ G, random }: { G: GState; random: Rng & { D6(): number } }) {
+function startDay({ G, random }: { G: GState; random: Rng & { Die(sides: number): number } }) {
   if (G.result) return;
   G.round += 1;
   G.votes = {};
@@ -137,8 +138,7 @@ function startDay({ G, random }: { G: GState; random: Rng & { D6(): number } }) 
   G.trades = [];
   for (const pid of humans(G)) G.ledgers[pid] = freshLedger();
 
-  G.dice = Array.from({ length: HARVEST_ROLLS }, () => [random.D6(), random.D6()] as [number, number]);
-  G.rolls = G.dice.map(([a, b]) => a + b);
+  G.rolls = Array.from({ length: HARVEST_ROLLS }, () => random.Die(DIE_SIDES));
 
   const gains: Partial<Record<NationId, Hand>> = {};
   for (const n of G.nationOrder) {
@@ -679,7 +679,6 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
         routes: [],
         envoys: [],
         round: 0,
-        dice: [],
         rolls: [],
         prices: Object.fromEntries(RESOURCES.map((r) => [r, START_PRICE])) as Record<Resource, number>,
         priceChange: {},

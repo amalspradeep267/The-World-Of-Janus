@@ -34,6 +34,17 @@ describe('The World of Janus', () => {
     expect(Object.keys(G0.handSizes).length).toBe(4);
   });
 
+  it('deals each city distinct harvest numbers from a 12-sided die', () => {
+    for (let k = 0; k < 20; k++) {
+      const G = view(startMatch(8)[0]);
+      for (const n of G.nationOrder) {
+        const nums = G.nations[n]!.tiles.map((t) => G.tiles[t].number!);
+        expect(new Set(nums).size).toBe(nums.length);
+        for (const x of nums) expect(x >= 1 && x <= 12).toBe(true);
+      }
+    }
+  });
+
   for (const n of [3, 4, 5, 8]) {
     it(`plays a full ${n}-player game to a result within the route caps`, () => {
       const clients = startMatch(n);

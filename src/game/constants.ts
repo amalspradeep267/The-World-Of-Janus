@@ -71,7 +71,11 @@ export const MAX_ROUNDS = 6;
 export const MAP_RADIUS = 3;
 export const TILES_PER_NATION = 3;
 
-/** Dice rolls per harvest; each matching tile yields DICE_YIELD of its resource. */
+/**
+ * Harvest dice: one 12-sided die per roll, so every number from 1 to 12 is equally likely
+ * and no city is stuck with bad numbers. Each matching tile yields DICE_YIELD of its resource.
+ */
+export const DIE_SIDES = 12;
 export const HARVEST_ROLLS = 1;
 export const DICE_YIELD = 2;
 /** Every nation gets this much of each of its own resources every day, dice or not. */

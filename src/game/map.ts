@@ -1,4 +1,4 @@
-import { NATIONS, RESOURCES, TILES_PER_NATION, type NationId, type Resource } from './constants';
+import { DIE_SIDES, NATIONS, RESOURCES, TILES_PER_NATION, type NationId, type Resource } from './constants';
 import type { Nation, Tile } from './types';
 
 /** The subset of boardgame.io's random API we use, so map generation stays testable. */
@@ -28,13 +28,6 @@ export function hexDistance(a: { q: number; r: number }, b: { q: number; r: numb
 function pick<T>(rng: Rng, list: readonly T[]): T {
   return list[Math.floor(rng.Number() * list.length)];
 }
-
-// One strong, one medium and one weak number per nation keeps harvests roughly fair.
-const NUMBER_TIERS = [
-  [5, 6, 8, 9],
-  [4, 5, 9, 10],
-  [2, 3, 4, 10, 11, 12],
-];
 
 export function generateMap(rng: Rng, nationCount: number, radius: number) {
   const coords = hexesInRadius(radius);
@@ -88,6 +81,17 @@ export function generateMap(rng: Rng, nationCount: number, radius: number) {
   const tiles: Tile[] = coords.map((c) => ({ ...c, nation: null, resource: null, number: null }));
   const nations: Partial<Record<NationId, Nation>> = {};
   const usage: Record<Resource, number> = Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>;
+  // Every die face is equally likely, so deal numbers from a shuffled deck of 1..12 to spread them evenly.
+  const faces = Array.from({ length: DIE_SIDES }, (_, i) => i + 1);
+  const deck: number[] = [];
+  const draw = (taken: number[]): number => {
+    let i = deck.findIndex((n) => !taken.includes(n));
+    if (i < 0) {
+      deck.push(...rng.Shuffle([...faces]));
+      i = deck.findIndex((n) => !taken.includes(n));
+    }
+    return deck.splice(i, 1)[0];
+  };
 
   regions.forEach((reg, i) => {
     const meta = NATIONS.find((n) => n.id === nationIds[i])!;
@@ -97,7 +101,8 @@ export function generateMap(rng: Rng, nationCount: number, radius: number) {
       .sort((a, b) => usage[a] - usage[b])
       .slice(0, TILES_PER_NATION);
     resources.forEach((r) => usage[r]++);
-    const numbers = rng.Shuffle(NUMBER_TIERS.map((tier) => pick(rng, tier)));
+    const numbers: number[] = [];
+    for (let k = 0; k < reg.length; k++) numbers.push(draw(numbers));
     reg.forEach((tileIdx, k) => {
       tiles[tileIdx].nation = meta.id;
       tiles[tileIdx].resource = resources[k];

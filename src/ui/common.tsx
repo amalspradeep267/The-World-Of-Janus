@@ -122,20 +122,21 @@ export const nationName = (G: GState, n: NationId) => G.nations[n]!.name;
 
 // ---------- dice ----------
 
-const PIPS: Record<number, [number, number][]> = {
-  1: [[50, 50]],
-  2: [[28, 28], [72, 72]],
-  3: [[28, 28], [50, 50], [72, 72]],
-  4: [[28, 28], [72, 28], [28, 72], [72, 72]],
-  5: [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]],
-  6: [[28, 26], [72, 26], [28, 50], [72, 50], [28, 74], [72, 74]],
-};
-
+/** A 12-sided die, drawn as a dodecahedron seen face-on: a pentagon face framed by its neighbours. */
 export function Die({ value, size = 46, rolling, delay = 0 }: { value: number; size?: number; rolling?: boolean; delay?: number }) {
+  const ring = (r: number, offset = -90) =>
+    Array.from({ length: 5 }, (_, i) => {
+      const a = ((offset + i * 72) * Math.PI) / 180;
+      return `${50 + r * Math.cos(a)},${52 + r * Math.sin(a)}`;
+    }).join(' ');
   return (
     <svg className={`die ${rolling ? 'rolling' : ''}`} width={size} height={size} viewBox="0 0 100 100" style={{ animationDelay: `${delay}ms` }}>
-      <rect x="4" y="4" width="92" height="92" rx="20" fill="#f7f1e3" stroke="#c9bfa5" strokeWidth="3" />
-      {PIPS[value]?.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="9" fill={value === 1 ? '#b3261e' : '#1d1a14'} />)}
+      <polygon points={ring(47, -54)} fill="#d8ccb0" stroke="#b9ab8b" strokeWidth="2" />
+      <polygon points={ring(47, -54)} fill="none" stroke="#b9ab8b" strokeWidth="2" transform="rotate(36 50 52)" opacity="0.6" />
+      <polygon points={ring(31)} fill="#f7f1e3" stroke="#b9ab8b" strokeWidth="2" />
+      <text x="50" y="61" textAnchor="middle" fontSize="28" fontWeight="800" fontFamily="var(--serif)" fill="#1d1a14">
+        {value}
+      </text>
     </svg>
   );
 }

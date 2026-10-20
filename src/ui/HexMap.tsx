@@ -14,8 +14,6 @@ function hexPoints(cx: number, cy: number, s = SIZE - 1.5) {
   }).join(' ');
 }
 
-const pips = (n: number) => 6 - Math.abs(7 - n);
-
 // Edge i runs from corner i to corner i+1 and faces this axial neighbour.
 const EDGE_DIRS = [[1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1], [1, -1]];
 
@@ -142,7 +140,7 @@ export function HexMap({ G, myNation, selected, onSelect }: Props) {
               return (
                 <>
                   <circle cx={tx} cy={ty} r={10} fill="#f4ecd8" stroke={hit ? 'var(--accent)' : 'none'} strokeWidth={3} filter={hit ? 'url(#glow)' : undefined} />
-                  <text x={tx} y={ty + 4} textAnchor="middle" fontSize="11" fontWeight="700" fill={pips(t.number!) >= 5 ? '#b3261e' : '#222'}>
+                  <text x={tx} y={ty + 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#222">
                     {t.number}
                   </text>
                 </>
@@ -223,8 +221,18 @@ export function HexMap({ G, myNation, selected, onSelect }: Props) {
             </text>
             {label && (
               <g pointerEvents="none">
-                <rect x={x - 38} y={y + 20} width={76} height={16} rx={8} fill="#12141a" opacity={0.9} />
-                <text x={x} y={y + 32} textAnchor="middle" fontSize="10" fill={label === 'You' ? 'var(--accent)' : '#e8e6e1'}>
+                <rect
+                  x={x - 38}
+                  y={y + 19}
+                  width={76}
+                  height={17}
+                  rx={8.5}
+                  fill={label === 'You' ? 'var(--gold)' : '#12141a'}
+                  stroke={label === 'You' ? '#fff3cf' : 'none'}
+                  strokeWidth={1.5}
+                  opacity={label === 'You' ? 1 : 0.92}
+                />
+                <text x={x} y={y + 31.5} textAnchor="middle" fontSize="10.5" fontWeight={label === 'You' ? 800 : 600} fill={label === 'You' ? '#241a06' : '#e8e6e1'}>
                   {label}
                 </text>
               </g>

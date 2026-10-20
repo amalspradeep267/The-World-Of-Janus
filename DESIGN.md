@@ -35,7 +35,7 @@ Anyone, Syndicate or Concord, whose city reaches **7 trade routes** (goods opene
 
 ## A round (6 rounds)
 
-1. **☀️ Harvest.** Every city gets +1 of each of its 3 resources. One pair of dice is rolled, and each tile with that number yields 2 more. Trade routes add a share of partners' harvests.
+1. **☀️ Harvest.** Every city gets +1 of each of its 3 resources. One **12-sided die** is rolled, so every number from 1 to 12 is equally likely, and each tile with that number yields 2 more. Each city's three tiles get three different numbers. Trade routes add a share of partners' harvests.
 2. **☀️ Day (public, signed with your name).** Talk on Discord.
    - **🔁 Trade** cards with other players. Every completed trade is in the public record.
    - **💰 Sell** cards at the market for gold. Every sale is public, including how much it earned.
@@ -98,6 +98,7 @@ Exposing every Syndicate member wins the game for the Concord immediately. All T
 - [x] **M1.6:** Relative pricing, whole-number gold, treasury spies, the Syndicate, tariffs, player names, map panning
 - [x] **M1.7:** Distance costs, paid Tribunal with fines, host setting for anonymous exposure
 - [x] **M1.8:** Free Trader becomes a secret title (7 trade routes) that grants the veto; two factions only
+- [x] **M1.9:** One d12 for harvests (equal odds); clearer "You" marker
 - [ ] **M2: Arms and War.** Weapons need ⛏️ Ore + 🔥 Coal **and gold** (money pays for armies); forts need stone and timber; attacks are dice plus weapons vs forts plus secret ally support. Hoarding war materials is a tell. The Syndicate's active win becomes conquest.
 - [ ] **M3: Nobody sits out.** A conquered player becomes a *Government in Exile*: still wins with their faction, still votes, and can sabotage occupiers.
 - [ ] Phase timers, host reconnect and saved state.

@@ -233,13 +233,12 @@ export function Board(props: BoardProps<GState>) {
             ))}
         </nav>
 
-        {G.dice.length > 0 && (
-          <div className="dice-tray" title="This morning's harvest roll: tiles with this number produce">
-            {G.dice.map(([a, b], i) => (
+        {G.rolls.length > 0 && (
+          <div className="dice-tray" title="This morning's harvest roll (d12): tiles with this number produce">
+            {G.rolls.map((n, i) => (
               <div key={`${G.round}-${i}`} className="dice-pair">
-                <Die value={a} rolling />
-                <Die value={b} rolling delay={120} />
-                <span className="dice-sum">{a + b}</span>
+                <Die value={n} size={84} rolling />
+                <span className="small muted">d12</span>
               </div>
             ))}
           </div>
