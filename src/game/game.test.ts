@@ -309,29 +309,50 @@ describe('The World of Janus', () => {
     voters.forEach((i, k) => expect(gold(clients[i], i)).toBe(before[k] - TRIBUNAL.entryGold - TRIBUNAL.innocentFine));
   });
 
-  it("lets the Free Trader's secret veto strike a verdict down", () => {
-    for (let attempt = 0; attempt < 30; attempt++) {
-      const { clients, factions } = toTribunal(4);
-      const trader = factions.indexOf('trader');
-      const target = factions.findIndex((f, i) => i !== trader && f !== 'trader');
-      const others = [0, 1, 2, 3].filter((i) => i !== target);
-      if (!others.includes(trader)) continue;
-      for (const i of others) clients[i].moves.enterTribunal();
-      // The two other entrants form a majority; the Free Trader keeps their gold for the veto.
-      for (const i of others) if (i !== trader) clients[i].moves.vote(String(target));
-      const g = gold(clients[trader], trader);
-      clients[trader].moves.armVeto(true);
-      expect(gold(clients[trader], trader)).toBe(g - TRIBUNAL.vetoGold);
-      // Nobody else can see that a veto is armed.
-      const other = others.find((i) => i !== trader)!;
-      expect(view(clients[other]).players[String(trader)]).toBeUndefined();
-      allReady(clients);
-      const v = view(clients[0]).verdicts.at(-1)!;
-      expect(v.vetoed).toBe(true);
-      expect(view(clients[0]).revealed[String(target)]).toBeUndefined();
-      return;
-    }
-    throw new Error('no suitable seating found');
+  it('keeps the veto for holders of the Free Trader title', () => {
+    const { clients } = toTribunal(4);
+    for (const i of [0, 1, 2]) clients[i].moves.enterTribunal();
+    const g = gold(clients[0], 0);
+    clients[0].moves.armVeto(true); // no title yet
+    expect(gold(clients[0], 0)).toBe(g);
+    expect(view(clients[0]).players['0'].veto).toBe(0);
+  });
+
+  it("lets a Free Trader's secret veto strike a verdict down", () => {
+    // Give player 0 a ready-made trade empire so they earn the title on the first night.
+    const base = makeGame(['P0', 'P1', 'P2', 'P3']);
+    const game = {
+      ...base,
+      setup: (ctx: any) => {
+        const G = (base.setup as any)(ctx) as GState;
+        const mine = G.players['0'].nation;
+        const others = G.nationOrder.filter((n) => n !== mine).slice(0, 4);
+        for (const [k, n] of others.entries()) {
+          G.routes.push({ a: mine, b: n, goods: [RESOURCES[k], RESOURCES[k + 1]].slice(0, k < 3 ? 2 : 1) });
+        }
+        return G;
+      },
+    };
+    const multiplayer = Local();
+    const matchID = `veto-${Math.random()}`;
+    const clients = [0, 1, 2, 3].map((i) => Client({ game, numPlayers: 4, playerID: String(i), multiplayer, matchID }));
+    clients.forEach((c) => c.start());
+    allReady(clients); // -> night 1
+    allReady(clients); // -> day 2: the title is awarded at the end of the night
+    expect(view(clients[0]).players['0'].freeTrader).toBe(true);
+    allReady(clients);
+    allReady(clients); // -> day 3
+    const target = 1;
+    for (const i of [0, 2, 3]) clients[i].moves.enterTribunal();
+    for (const i of [2, 3]) clients[i].moves.vote(String(target));
+    const g = gold(clients[0], 0);
+    clients[0].moves.armVeto(true);
+    expect(gold(clients[0], 0)).toBe(g - TRIBUNAL.vetoGold);
+    expect(view(clients[2]).players['0']).toBeUndefined(); // nobody else can see it
+    allReady(clients);
+    const v = view(clients[0]).verdicts.at(-1)!;
+    expect(v.vetoed).toBe(true);
+    expect(view(clients[0]).revealed[String(target)]).toBeUndefined();
   });
 
   it('can keep exposed factions secret when the host chooses', () => {

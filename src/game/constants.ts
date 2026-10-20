@@ -25,9 +25,13 @@ export const NATIONS = [
 ] as const;
 export type NationId = (typeof NATIONS)[number]['id'];
 
-export type Faction = 'syndicate' | 'concord' | 'trader';
+export type Faction = 'syndicate' | 'concord';
 
-export const TRADER_GOAL = 7;
+/**
+ * 🟡 Free Trader is a title, not a faction: anyone whose city has this many trade
+ * routes (goods opened on its connections) earns it. It's secret and grants the Tribunal veto.
+ */
+export const FREE_TRADER_ROUTES = 7;
 /** The Tribunal opens on this round. */
 export const TRIBUNAL_FROM_ROUND = 3;
 /** Anyone the Tribunal exposes pays this on every trade, and earns less at the market. */
@@ -36,7 +40,7 @@ export const TARIFF = { tradeGold: 5, saleCut: 0.25 };
 /**
  * The Tribunal: players pay to enter; it convenes with at least `minEntrants`.
  * Entrants vote for free, and a majority of entrants exposes the accused.
- * Voters who expose an innocent are fined. The Free Trader may arm a secret veto.
+ * Voters who expose an innocent are fined. A Free Trader (title holder) may arm a secret veto.
  */
 export const TRIBUNAL = { entryGold: 4, minEntrants: 3, innocentFine: 8, vetoGold: 10 };
 
@@ -49,20 +53,16 @@ export const FACTION_INFO: Record<Faction, { label: string; goal: string }> = {
     label: 'Concord',
     goal: 'Find the Syndicate. Expose every Syndicate member at the Tribunal before the game ends.',
   },
-  trader: {
-    label: 'Free Trader',
-    goal: `Build a trade empire: have at least ${TRADER_GOAL} goods flowing through your trade routes at the end. You can secretly veto the Tribunal. Grow too fast and you'll look like the Syndicate.`,
-  },
 };
 
 /** Faction counts and map size per player count. Bot nations fill the rest of the map. */
-export const SETUP_TABLE: Record<number, { syndicate: number; trader: number; nations: number; concordPairs: number }> = {
-  3: { syndicate: 1, trader: 0, nations: 6, concordPairs: 0 },
-  4: { syndicate: 1, trader: 1, nations: 6, concordPairs: 0 },
-  5: { syndicate: 1, trader: 1, nations: 7, concordPairs: 1 },
-  6: { syndicate: 2, trader: 1, nations: 7, concordPairs: 1 },
-  7: { syndicate: 2, trader: 1, nations: 8, concordPairs: 1 },
-  8: { syndicate: 2, trader: 1, nations: 8, concordPairs: 2 },
+export const SETUP_TABLE: Record<number, { syndicate: number; nations: number; concordPairs: number }> = {
+  3: { syndicate: 1, nations: 6, concordPairs: 0 },
+  4: { syndicate: 1, nations: 6, concordPairs: 0 },
+  5: { syndicate: 1, nations: 7, concordPairs: 1 },
+  6: { syndicate: 2, nations: 7, concordPairs: 1 },
+  7: { syndicate: 2, nations: 8, concordPairs: 2 },
+  8: { syndicate: 2, nations: 8, concordPairs: 2 },
 };
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 8;

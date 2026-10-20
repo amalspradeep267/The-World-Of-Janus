@@ -57,7 +57,9 @@ export interface PlayerSecret {
   plans: NightPlan[];
   /** What this morning's harvest brought: own land, and extra from trade routes. */
   harvest: { land: Hand; routes: Hand };
-  /** Free Trader only: gold set aside for a veto today (0 = not armed). Secret. */
+  /** Holds the secret 🟡 Free Trader title (earned with enough trade routes). */
+  freeTrader: boolean;
+  /** Free Traders only: gold set aside for a veto today (0 = not armed). Secret. */
   veto: number;
 }
 

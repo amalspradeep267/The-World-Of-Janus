@@ -18,18 +18,20 @@ Day actions are signed with your name. Night actions are reported by city only. 
 |---|---|---|---|
 | 🔴 **The Syndicate** | 1 (2 with 6+ players) | Every Syndicate member's city | Any Syndicate member is still unexposed at the end of round 6 |
 | 🔵 **Concord** | Everyone else | Nothing, or one trusted partner (5+ players) | Every Syndicate member has been exposed at the Tribunal |
-| 🟡 **Free Trader** | 1 (4+ players) | Nothing | **7+ goods** flowing through their trade routes at the end (of a possible 8); wins alongside whoever else wins. Has a secret Tribunal veto |
 
-The Syndicate alone can use the 🕶️ black market. The Free Trader's goal needs a near-maxed trade network, which is expensive and conspicuous: build too fast and you look like the Syndicate. Unruled **bot cities** fill out the map so small groups still have plenty to work out:
+The Syndicate alone can use the 🕶️ black market.
 
-| Players | Syndicate | Concord | Trader | Cities on map | Concord pairs |
-|---|---|---|---|---|---|
-| 3 | 1 | 2 | 0 | 6 | 0 |
-| 4 | 1 | 2 | 1 | 6 | 0 |
-| 5 | 1 | 3 | 1 | 7 | 1 |
-| 6 | 2 | 3 | 1 | 7 | 1 |
-| 7 | 2 | 4 | 1 | 8 | 1 |
-| 8 | 2 | 5 | 1 | 8 | 2 |
+### 🟡 Free Trader: a title, not a faction
+Anyone, Syndicate or Concord, whose city reaches **7 trade routes** (goods opened on its connections; the maximum is 8) earns the **Free Trader** title at the end of that night. It's permanent and **secret**: only the holder is told, because routes are visible on the map and naming the holder would point at their city. The title grants the **Tribunal veto**. It doesn't change your faction or how you win. A big trade empire is expensive and conspicuous, so whoever builds one starts to look like the Syndicate. Unruled **bot cities** fill out the map so small groups still have plenty to work out:
+
+| Players | Syndicate | Concord | Cities on map | Concord pairs |
+|---|---|---|---|---|
+| 3 | 1 | 2 | 6 | 0 |
+| 4 | 1 | 3 | 6 | 0 |
+| 5 | 1 | 4 | 7 | 1 |
+| 6 | 2 | 4 | 7 | 1 |
+| 7 | 2 | 5 | 8 | 2 |
+| 8 | 2 | 6 | 8 | 2 |
 
 ## A round (6 rounds)
 
@@ -64,7 +66,7 @@ The Syndicate alone can use the 🕶️ black market. The Free Trader's goal nee
 | Vote | Only entrants vote, for free; votes can change until dusk. Anyone can be accused, entrant or not |
 | Verdict | A **majority of entrants** exposes the accused: their city is revealed, and they pay a 🚫 **tariff** from then on (5 gold per trade, 25% less from sales) |
 | Innocent exposed | Everyone who voted for them is fined **8 gold** |
-| 🟡 Veto | The Free Trader, if inside, can secretly arm a veto (10 gold, refunded if there's no verdict). It strikes the verdict down; the news says only "a secret veto" |
+| 🟡 Veto | A Free Trader (title holder), if inside, can secretly arm a veto (10 gold, refunded if there's no verdict). It strikes the verdict down; the news says only "a secret veto" |
 | Host setting | By default an exposure also reveals the **faction**. The host can switch that off when creating the room, like Among Us's anonymous ejects |
 
 Exposing every Syndicate member wins the game for the Concord immediately. All Tribunal fees and fines appear in spy reports.
@@ -94,7 +96,8 @@ Exposing every Syndicate member wins the game for the Concord immediately. All T
 - [x] **M1: Diplomacy loop.** Map, harvest, trade, market, envoys, routes, news, Tribunal, bots, P2P rooms
 - [x] **M1.5: Economy.** Recipes, black market, route caps, card counts, sound cues, quit to home
 - [x] **M1.6:** Relative pricing, whole-number gold, treasury spies, the Syndicate, tariffs, player names, map panning
-- [x] **M1.7:** Distance costs, Free Trader rework (7 goods, veto), paid Tribunal with fines, host setting for anonymous exposure
+- [x] **M1.7:** Distance costs, paid Tribunal with fines, host setting for anonymous exposure
+- [x] **M1.8:** Free Trader becomes a secret title (7 trade routes) that grants the veto; two factions only
 - [ ] **M2: Arms and War.** Weapons need ⛏️ Ore + 🔥 Coal **and gold** (money pays for armies); forts need stone and timber; attacks are dice plus weapons vs forts plus secret ally support. Hoarding war materials is a tell. The Syndicate's active win becomes conquest.
 - [ ] **M3: Nobody sits out.** A conquered player becomes a *Government in Exile*: still wins with their faction, still votes, and can sabotage occupiers.
 - [ ] Phase timers, host reconnect and saved state.

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { FACTION_INFO, MAX_ROUNDS, PUMP, RECIPE, RESOURCES, RESOURCE_INFO, TRIBUNAL, TRIBUNAL_FROM_ROUND, type NationId, type Resource } from '../game/constants';
-import { handTotal, saleValue, smugglePrice } from '../game/game';
+import { FACTION_INFO, FREE_TRADER_ROUTES, MAX_ROUNDS, PUMP, RECIPE, RESOURCES, RESOURCE_INFO, TRIBUNAL, TRIBUNAL_FROM_ROUND, type NationId, type Resource } from '../game/constants';
+import { handTotal, saleValue, smugglePrice, tradeRouteCount } from '../game/game';
 import type { GState, Hand, PlayerSecret } from '../game/types';
 import { Avatar, GoldCard, goodsEmoji, Modal, nationIcon, nationName, playerOf, Recipe, ResCard, ResPill } from './common';
 
@@ -216,9 +216,14 @@ export function TribunalModal({ G, me, playerID, moves, onClose }: { G: GState; 
           <p className="small muted" style={{ marginTop: 10 }}>
             {myVote ? 'Click your accused again to withdraw. You can change your vote until dusk.' : 'You have not accused anyone.'}
           </p>
-          {me.faction === 'trader' && (
+          {!me.freeTrader && (
+            <p className="small muted" style={{ marginTop: 12 }}>
+              🟡 Reach {FREE_TRADER_ROUTES} trade routes to earn the secret Free Trader title, which can veto the Tribunal.
+            </p>
+          )}
+          {me.freeTrader && (
             <div className="item stack" style={{ marginTop: 12, background: '#2e2a1c', border: '1px solid var(--gold)' }}>
-              <b>🟡 Your secret veto</b>
+              <b>🟡 Free Trader's secret veto</b>
               <span className="small muted">
                 Strike down today's verdict, whoever it hits. Nobody can see it's armed; the news only says "a secret veto". Refunded if
                 there's no verdict.
@@ -245,6 +250,13 @@ export function IdentityModal({ G, me, onClose }: { G: GState; me: PlayerSecret;
         <h2>You rule {nationName(G, me.nation)}</h2>
         <span className={`faction-tag faction-${me.faction}`}>{FACTION_INFO[me.faction].label}</span>
         <p>{FACTION_INFO[me.faction].goal}</p>
+        <p className="small">
+          {me.freeTrader ? (
+            <span className="faction-tag faction-title">🟡 Free Trader: you can veto the Tribunal</span>
+          ) : (
+            <>🟡 Trade routes: {tradeRouteCount(G, me.nation)}/{FREE_TRADER_ROUTES} toward the secret Free Trader title</>
+          )}
+        </p>
         <div className="center" style={{ gap: 6, margin: '8px 0 4px' }}>
           {G.nations[me.nation]!.resources.map((r) => (
             <ResPill key={r} res={r} />
@@ -252,7 +264,7 @@ export function IdentityModal({ G, me, onClose }: { G: GState; me: PlayerSecret;
         </div>
       </div>
       <div className="step">🔍 What you know</div>
-      {known.length === 0 && <p className="small muted">Nothing yet. Accept envoys or send spies to find out who rules what.</p>}
+      {known.length === 0 && <p className="small muted">Nothing yet. Match public trades and sales to what cities do at night, compare spy reports with the sales record, or accept an envoy to learn who sent it.</p>}
       <div className="pick-grid">
         {known.map(([n, who]) => (
           <div key={n} className="pickable" style={{ cursor: 'default' }}>
@@ -378,6 +390,7 @@ export function Welcome({ G, me, onClose }: { G: GState; me: PlayerSecret; onClo
             <div><span className="hi">☀️</span><b>Day</b><span>Talk on Discord. Trade cards openly. Accuse at the ⚖️ Tribunal.</span></div>
             <div><span className="hi">🌙</span><b>Night</b><span>Click a city on the map to send envoys, open trade or spy. Each action needs specific cards.</span></div>
             <div><span className="hi">🔁</span><b>Cover your tracks</b><span>Trade by day for the cards your night plans need. Every trade and sale is public.</span></div>
+            <div><span className="hi">🟡</span><b>Free Trader</b><span>A secret title for whoever builds {FREE_TRADER_ROUTES} trade routes. It can veto the Tribunal.</span></div>
             <div><span className="hi">🕵️</span><b>Spies</b><span>read a city's treasury. Match its gold to the public sales to unmask its ruler.</span></div>
             <div><span className="hi">📰</span><b>Morning news</b><span>shows what each city did, but never who did it.</span></div>
           </div>

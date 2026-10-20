@@ -259,7 +259,7 @@ select, input { font: inherit; color: var(--text); background: var(--panel-2); b
 .faction-tag { display: inline-block; padding: 4px 14px; border-radius: 999px; font-family: var(--serif); font-weight: 700; margin-bottom: 10px; }
 .faction-syndicate { background: #5a1f1f; color: #ffb3b3; }
 .faction-concord { background: #1f3f5a; color: #b3dcff; }
-.faction-trader { background: #4a3d16; color: #ffe4a3; }
+.faction-title { background: #4a3d16; color: #ffe4a3; }
 
 .seat-tabs { display: flex; gap: 6px; padding: 6px 16px; background: #07080e; border-bottom: 1px solid var(--line); flex-wrap: wrap; align-items: center; }
 .seat-tabs button.active { border-color: var(--gold); color: var(--gold); }

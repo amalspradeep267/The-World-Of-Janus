@@ -28,7 +28,7 @@ import {
   START_EACH,
   START_GOLD,
   START_PRICE,
-  TRADER_GOAL,
+  FREE_TRADER_ROUTES,
   TRIBUNAL,
   TRIBUNAL_FROM_ROUND,
   type Faction,
@@ -119,18 +119,12 @@ const pendingBetween = (G: GState, x: NationId, y: NationId) =>
 
 const humans = (G: GState) => G.roster.map((p) => p.id);
 
-function tradeVolume(G: GState, n: NationId) {
+/** Trade routes a city has: every good opened on any of its connections. */
+export function tradeRouteCount(G: GState, n: NationId) {
   return G.routes.filter((rt) => rt.a === n || rt.b === n).reduce((s, rt) => s + rt.goods.length, 0);
 }
 
-function finalResult(G: GState, winners: Faction[], reason: string): GameResult {
-  const trader = humans(G).find((pid) => G.players[pid].faction === 'trader');
-  if (trader && tradeVolume(G, G.players[trader].nation) >= TRADER_GOAL) {
-    winners = [...winners, 'trader'];
-    reason += ` The Free Trader also hit their trade goal.`;
-  }
-  return { winners, reason };
-}
+const finalResult = (winners: Faction[], reason: string): GameResult => ({ winners, reason });
 
 // ---------- phase hooks ----------
 
@@ -254,7 +248,7 @@ function resolveTribunal(G: GState) {
     G.publicLog.push({ round: G.round, text: `⚖️ ${fined.map((pid) => nameOf(G, pid)).join(', ')} paid a fine of ${TRIBUNAL.innocentFine} gold.` });
   }
   const left = humans(G).filter((pid) => G.players[pid].faction === 'syndicate' && !G.revealed[pid]);
-  if (left.length === 0) G.result = finalResult(G, ['concord'], 'Every Syndicate member was exposed. The Concord wins.');
+  if (left.length === 0) G.result = finalResult(['concord'], 'Every Syndicate member was exposed. The Concord wins.');
 }
 
 function startNight({ G }: { G: GState }) {
@@ -389,12 +383,23 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
   if (news.length === 0) news.push({ t: 'quiet' });
   if (Object.keys(G.priceChange).length) news.push({ t: 'market', changes: { ...G.priceChange } });
   G.news.push({ round: G.round, items: news });
+
+  // Award the secret Free Trader title to anyone who now has enough trade routes.
+  for (const pid of humans(G)) {
+    const p = G.players[pid];
+    if (!p.freeTrader && tradeRouteCount(G, p.nation) >= FREE_TRADER_ROUTES) {
+      p.freeTrader = true;
+      p.inbox.push({
+        round: G.round,
+        text: `🟡 With ${FREE_TRADER_ROUTES} trade routes you've earned the secret title of Free Trader. You can now veto the Tribunal.`,
+      });
+    }
+  }
   G.ready = {};
 
   if (!G.result && G.round >= MAX_ROUNDS) {
     const hidden = humans(G).filter((pid) => G.players[pid].faction === 'syndicate' && !G.revealed[pid]);
     G.result = finalResult(
-      G,
       hidden.length ? ['syndicate'] : ['concord'],
       hidden.length
         ? 'Time ran out with Syndicate members still hidden. The Syndicate wins.'
@@ -513,7 +518,7 @@ const vote = hostOnly(({ G, playerID }, target: PlayerID | null) => {
 /** Free Trader only, inside the Tribunal: arm (or disarm) a secret veto for today. */
 const armVeto = hostOnly(({ G, playerID }, on: boolean) => {
   const p = me(G, playerID);
-  if (!p || p.faction !== 'trader' || !G.entrants[playerID!]) return INVALID_MOVE;
+  if (!p || !p.freeTrader || !G.entrants[playerID!]) return INVALID_MOVE;
   if (on && !p.veto) {
     if (p.gold < TRIBUNAL.vetoGold) return INVALID_MOVE;
     spend(G, playerID!, TRIBUNAL.vetoGold);
@@ -616,8 +621,7 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
 
       const factions: Faction[] = [
         ...Array(table.syndicate).fill('syndicate'),
-        ...Array(table.trader).fill('trader'),
-        ...Array(count - table.syndicate - table.trader).fill('concord'),
+        ...Array(count - table.syndicate).fill('concord'),
       ];
       const dealt = random.Shuffle(factions);
       const seats = random.Shuffle([...nationOrder]);
@@ -639,6 +643,7 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
           inbox: [],
           plans: [],
           harvest: { land: emptyHand(), routes: emptyHand() },
+          freeTrader: false,
           veto: 0,
         };
       });
@@ -659,7 +664,7 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
         p.inbox.push({
           round: 0,
           text: `You rule ${nations[p.nation]!.icon} ${nations[p.nation]!.name}. ${
-            p.faction === 'trader' ? 'You are a Free Trader and answer to no one.' : `Your faction: ${FACTION_INFO[p.faction].label}.`
+            `Your faction: ${FACTION_INFO[p.faction].label}.`
           } ${
             allies.length ? `Trusted: ${allies.join('; ')}.` : 'You trust no one yet.'
           }`,

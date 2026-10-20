@@ -17,7 +17,7 @@ Everyone knows who's at the table. Nobody knows who rules which city on the map.
 
 Each city produces only 3 of 7 resources, and night actions need specific cards, so most players must trade in public to act. Trade for Grain and Wool today, and people will guess you sent tonight's envoy.
 
-**Factions.** **The Syndicate** knows its own members, has the black market to itself, and wants to stay hidden. The **Concord** must expose every Syndicate member at the Tribunal. A lone **Free Trader** just wants busy trade routes. Unruled bot cities fill out the map, so even a 3-player game has plenty to work out.
+**Factions.** **The Syndicate** knows its own members, has the black market to itself, and wants to stay hidden. The **Concord** must expose every Syndicate member at the Tribunal. Anyone who builds 7 trade routes earns the secret **🟡 Free Trader** title, which can veto the Tribunal. Unruled bot cities fill out the map, so even a 3-player game has plenty to work out.
 
 Full rules, design decisions and the roadmap are in [DESIGN.md](DESIGN.md).
 
