@@ -48,7 +48,7 @@ export type NightPlan =
   | { kind: 'smuggle'; good: Resource; gold: number }
   | { kind: 'pump'; good: Resource; gold: number }
   | { kind: 'kidnap'; nation: NationId; suspect: PlayerID; gold: number }
-  | { kind: 'factory'; good: Resource; paid: Partial<Hand>; gold: number };
+  | { kind: 'factory'; tile: number; good: Resource; paid: Partial<Hand>; gold: number };
 
 export interface PlayerSecret {
   nation: NationId;

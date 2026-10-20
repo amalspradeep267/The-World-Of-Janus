@@ -337,18 +337,16 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
         p.inbox.push({ round: G.round, text: `🕶️ Your agents bid up ${RESOURCE_INFO[plan.good].emoji} ${RESOURCE_INFO[plan.good].label}.` });
       } else if (plan.kind === 'factory') {
         const n = G.nations[p.nation]!;
-        // Fill the outer tiles before the capital, which is crowded with the city banner.
-        const tile = [...n.tiles.slice(1), n.tiles[0]].find((t) => !n.factories.some((f) => f.tile === t));
-        if (tile === undefined || n.factories.length >= FACTORY.maxPerCity) {
+        if (n.factories.some((f) => f.tile === plan.tile)) {
           refund(p, plan.paid);
-          p.inbox.push({ round: G.round, text: 'There was no room for another factory. Refunded.' });
+          p.inbox.push({ round: G.round, text: 'That tile already has a factory. Refunded.' });
           continue;
         }
-        n.factories.push({ tile, good: plan.good });
+        n.factories.push({ tile: plan.tile, good: plan.good });
         items.push({ t: 'factory', nation: p.nation, good: plan.good });
         p.inbox.push({
           round: G.round,
-          text: `🏭 Your factory is built. It makes ${FACTORY.yield} ${RESOURCE_INFO[plan.good].emoji} ${RESOURCE_INFO[plan.good].label} every dawn.`,
+          text: `🏭 Your factory is built on your ${RESOURCE_INFO[plan.good].label} tile. It adds ${FACTORY.yield} ${RESOURCE_INFO[plan.good].emoji} every dawn.`,
         });
       } else if (plan.kind === 'kidnap') {
         kidnapOrders.push({ pid, nation: plan.nation, suspect: plan.suspect, gold: plan.gold });
@@ -670,18 +668,24 @@ const planSpy = hostOnly(({ G, playerID }, nation: NationId) => {
 
 const isSyndicate = (p: PlayerSecret | undefined) => p?.faction === 'syndicate';
 
-/** Build a factory in your own city that makes a resource it doesn't produce naturally. */
-const planFactory = hostOnly(({ G, playerID }, good: Resource) => {
-  const p = me(G, playerID);
-  if (!p || !RESOURCES.includes(good)) return INVALID_MOVE;
+/** Can a factory go on this tile of your city? (One per tile; optionally only some tile types.) */
+export function canBuildFactory(G: GState, p: PlayerSecret, tile: number) {
   const n = G.nations[p.nation]!;
-  if (n.resources.includes(good)) return INVALID_MOVE;
-  const planned = p.plans.filter((x) => x.kind === 'factory').length;
-  if (n.factories.length + planned >= FACTORY.maxPerCity) return INVALID_MOVE;
+  const t = G.tiles[tile];
+  if (!n.tiles.includes(tile) || !t?.resource) return false;
+  if (FACTORY.tiles && !FACTORY.tiles.includes(t.resource)) return false;
+  if (n.factories.some((f) => f.tile === tile)) return false;
+  return !p.plans.some((x) => x.kind === 'factory' && x.tile === tile);
+}
+
+/** Build a factory on one of your own tiles: it adds more of that tile's resource every dawn. */
+const planFactory = hostOnly(({ G, playerID }, tile: number) => {
+  const p = me(G, playerID);
+  if (!p || !Number.isInteger(tile) || !canBuildFactory(G, p, tile)) return INVALID_MOVE;
   const paid = { ...RECIPE.factory };
   if (!hasGoods(p.hand, paid)) return INVALID_MOVE;
   moveGoods(p.hand, null, paid);
-  p.plans.push({ kind: 'factory', good, paid, gold: 0 });
+  p.plans.push({ kind: 'factory', tile, good: G.tiles[tile].resource!, paid, gold: 0 });
 });
 
 /** Syndicate only, day or night: hire (or dismiss) security that bribes tonight's spies. */

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { RESOURCE_INFO, type NationId } from '../game/constants';
+import { FACTORY, RESOURCE_INFO, type NationId } from '../game/constants';
 import type { GState } from '../game/types';
 
 const SIZE = 40;
@@ -141,7 +141,7 @@ export function HexMap({ G, myNation, selected, onSelect }: Props) {
               const by = capital ? y - 30 : y - 9;
               return (
                 <g pointerEvents="none">
-                  <title>Factory making {RESOURCE_INFO[f.good].label}</title>
+                  <title>Factory: +{FACTORY.yield} {RESOURCE_INFO[f.good].label} every dawn</title>
                   <rect x={bx} y={by} width={30} height={18} rx={6} fill="#12141a" stroke="var(--gold)" strokeWidth={1.2} />
                   <text x={bx + 15} y={by + 13} textAnchor="middle" fontSize="11">
                     🏭{RESOURCE_INFO[f.good].emoji}

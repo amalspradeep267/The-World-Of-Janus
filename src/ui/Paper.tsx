@@ -46,7 +46,7 @@ function Headline({ G, item }: { G: GState; item: NewsItem }) {
           </span>
           <span className="cap">
             Factory opens in {nationName(G, item.nation)}
-            <em>It will turn out {RESOURCE_INFO[item.good].label} every morning</em>
+            <em>It will turn out extra {RESOURCE_INFO[item.good].label} every morning</em>
           </span>
         </div>
       );

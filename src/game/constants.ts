@@ -98,10 +98,11 @@ export const RECIPE: Record<'envoy' | 'route' | 'factory', Partial<Record<Resour
 };
 
 /**
- * 🏭 Factories (night, your own city): make a resource your city doesn't produce naturally,
- * `yield` of it every dawn, from the dawn after it's built. One per tile, so up to `maxPerCity`.
+ * 🏭 Factories (night, your own city): built on one of your tiles, a factory adds `yield` of that
+ * tile's resource every dawn, from the dawn after it's built. One per tile, so up to 3 per city.
+ * `tiles` limits which tile types can host one: null = any, or e.g. ['coal', 'ore', 'silk'].
  */
-export const FACTORY = { yield: 2, maxPerCity: 3 };
+export const FACTORY: { yield: number; tiles: Resource[] | null } = { yield: 1, tiles: null };
 /** Spies report one city's treasury for the round: total gold received, and total gold spent. */
 export const COST = { spyGold: 12 };
 

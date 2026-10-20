@@ -496,31 +496,32 @@ describe('The World of Janus', () => {
     return clients;
   }
 
-  it('builds a factory that makes a foreign resource every dawn', () => {
+  it("builds a factory that boosts one of your own tiles every dawn", () => {
     const clients = factoryMatch();
     allReady(clients); // -> night 1
     const G = view(clients[0]);
     const nation = G.players['0'].nation;
-    const native = G.nations[nation]!.resources;
-    const good = RESOURCES.find((r) => !native.includes(r))!;
-    clients[0].moves.planFactory(native[0]); // can't manufacture what you already produce
+    const tile = G.nations[nation]!.tiles[1];
+    const good = G.tiles[tile].resource!;
+    const foreignTile = G.tiles.findIndex((t, i) => t.nation && t.nation !== nation && i >= 0);
+    clients[0].moves.planFactory(foreignTile); // not your city
     expect(view(clients[0]).players['0'].plans).toHaveLength(0);
-    clients[0].moves.planFactory(good);
+    clients[0].moves.planFactory(tile);
+    clients[0].moves.planFactory(tile); // one per tile
     expect(view(clients[0]).players['0'].plans).toHaveLength(1);
     allReady(clients); // -> day 2: built overnight, produces at this dawn
     const after = view(clients[0]);
-    expect(after.nations[nation]!.factories).toEqual([{ tile: expect.any(Number), good }]);
-    expect(after.players['0'].harvest.land[good]).toBe(FACTORY.yield);
+    expect(after.nations[nation]!.factories).toEqual([{ tile, good }]);
+    // Base income (1) + the factory, plus any dice hits.
+    expect(after.players['0'].harvest.land[good]).toBeGreaterThanOrEqual(1 + FACTORY.yield);
     expect(after.news.at(-1)!.items.some((i) => i.t === 'factory')).toBe(true);
   });
 
-  it('allows at most three factories per city', () => {
+  it('allows one factory per tile, so three per city', () => {
     const clients = factoryMatch();
     allReady(clients); // -> night 1
     const G = view(clients[0]);
-    const native = G.nations[G.players['0'].nation]!.resources;
-    const foreign = RESOURCES.filter((r) => !native.includes(r));
-    for (const r of foreign) clients[0].moves.planFactory(r);
-    expect(view(clients[0]).players['0'].plans.filter((p) => p.kind === 'factory')).toHaveLength(FACTORY.maxPerCity);
+    for (const t of G.nations[G.players['0'].nation]!.tiles) clients[0].moves.planFactory(t);
+    expect(view(clients[0]).players['0'].plans.filter((p) => p.kind === 'factory')).toHaveLength(3);
   });
 });

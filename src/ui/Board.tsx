@@ -281,7 +281,7 @@ export function Board(props: BoardProps<GState>) {
             <span key={i} className="order">
               {p.kind === 'envoy' && <>✉️ Envoy ➜ {nationIcon(G, p.to)}</>}
               {p.kind === 'route' && <>🤝 {RESOURCE_INFO[p.good].emoji} supply line ➜ {nationIcon(G, p.with)}</>}
-              {p.kind === 'factory' && <>🏭 Factory making {RESOURCE_INFO[p.good].emoji}</>}
+              {p.kind === 'factory' && <>🏭 Factory on your {RESOURCE_INFO[p.good].emoji} tile</>}
               {p.kind === 'spy' && <>🕵️ Spy on {nationIcon(G, p.nation)}'s treasury</>}
               {p.kind === 'smuggle' && <>🕶️ Smuggle {RESOURCE_INFO[p.good].emoji}</>}
               {p.kind === 'pump' && <>🕶️ Pump {RESOURCE_INFO[p.good].emoji} ▲</>}
