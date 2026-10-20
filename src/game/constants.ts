@@ -99,10 +99,13 @@ export const RECIPE: Record<'envoy' | 'route' | 'factory', Partial<Record<Resour
 
 /**
  * 🏭 Factories (night, your own city): built on one of your tiles, a factory adds `yield` of that
- * tile's resource every dawn, from the dawn after it's built. One per tile, so up to 3 per city.
+ * tile's resource every dawn, dice or not, from the dawn after it's built. One per tile.
+ * Cost: RECIPE.factory (Ore + Coal) plus `tileCost` of the tile's own resource. Tuned so that a
+ * city saving up alone builds on about night 3, and one that trades for the missing cards on night 1-2.
  * `tiles` limits which tile types can host one: null = any, or e.g. ['coal', 'ore', 'silk'].
+ * (Alternative to try later: +1 only when the die hits that tile, with a cheaper cost.)
  */
-export const FACTORY: { yield: number; tiles: Resource[] | null } = { yield: 1, tiles: null };
+export const FACTORY: { yield: number; tileCost: number; tiles: Resource[] | null } = { yield: 1, tileCost: 5, tiles: null };
 /** Spies report one city's treasury for the round: total gold received, and total gold spent. */
 export const COST = { spyGold: 12 };
 

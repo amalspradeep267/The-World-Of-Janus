@@ -11,7 +11,7 @@ import {
   type NationId,
   type Resource,
 } from '../game/constants';
-import { canBuildFactory, cityDistance, distanceGold, findRoute, routeCount } from '../game/game';
+import { canBuildFactory, cityDistance, distanceGold, factoryCost, findRoute, hasGoods, routeCount } from '../game/game';
 import type { GState, PlayerSecret } from '../game/types';
 import { Avatar, playerOf, Recipe, ResPill, missingFor } from './common';
 
@@ -67,14 +67,17 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
         : shortOfGold
           ? `It's far away: you need ${travel} gold for the journey.`
           : null;
-  const factoryMissing = missingFor(me.hand, RECIPE.factory);
   const factoryTiles = mine ? n.tiles.filter((t) => canBuildFactory(G, me, t)) : [];
+  const affordableTiles = factoryTiles.filter((t) => hasGoods(me.hand, factoryCost(G, t)));
+  const factoryMissing = missingFor(me.hand, RECIPE.factory);
   const factoryBlock =
     factoryTiles.length === 0
       ? FACTORY.tiles
         ? `Factories only go on ${FACTORY.tiles.map((r) => RESOURCE_INFO[r].emoji).join(' ')} tiles, one each, and you have no free one.`
         : 'Every one of your tiles already has a factory.'
-      : factoryMissing.length
+      : affordableTiles.length === 0 && !factoryMissing.length
+        ? `You need ${FACTORY.tileCost} of a tile's own resource as well. Save up, or trade for more.`
+        : factoryMissing.length
         ? `Missing ${factoryMissing.map((r) => RESOURCE_INFO[r].emoji).join(' ')}: trade for it by day${canSmuggle ? ' or 🕶️ smuggle it' : ''}.`
         : null;
   const routeBlock = goodsFull
@@ -150,23 +153,32 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
                 <span className="ai">🏭</span>
                 <span>
                   <b>Build a factory</b>
-                  <span>{factoryBlock ?? `Pick one of your tiles: it makes ${FACTORY.yield} more of its resource every dawn. Everyone will see it on the map.`}</span>
+                  <span>
+                    {factoryBlock ??
+                      `Pick one of your tiles: it makes ${FACTORY.yield} more of its resource every dawn. Costs ${FACTORY.tileCost} of that resource plus ⛏️ + 🔥. Everyone will see it on the map.`}
+                  </span>
                 </span>
-                <Recipe recipe={RECIPE.factory} hand={me.hand} />
+                <span className="cost">
+                  {FACTORY.tileCost}× tile + <Recipe recipe={RECIPE.factory} hand={me.hand} />
+                </span>
               </button>
               {mode === 'factory' && (
-                <div className="row" style={{ marginTop: 8 }}>
+                <div className="stack" style={{ marginTop: 8 }}>
                   {factoryTiles.map((t) => {
                     const r = G.tiles[t].resource!;
+                    const cost = factoryCost(G, t);
                     return (
                       <button
                         key={t}
+                        className="row"
+                        disabled={!hasGoods(me.hand, cost)}
+                        title={hasGoods(me.hand, cost) ? undefined : `You have ${me.hand[r]} ${RESOURCE_INFO[r].label}`}
                         onClick={() => {
                           moves.planFactory(t);
                           setMode(null);
                         }}
                       >
-                        {RESOURCE_INFO[r].emoji} {RESOURCE_INFO[r].label} tile ({G.tiles[t].number})
+                        {RESOURCE_INFO[r].emoji} {RESOURCE_INFO[r].label} tile ({G.tiles[t].number}) · <Recipe recipe={cost} hand={me.hand} />
                       </button>
                     );
                   })}

@@ -678,11 +678,17 @@ export function canBuildFactory(G: GState, p: PlayerSecret, tile: number) {
   return !p.plans.some((x) => x.kind === 'factory' && x.tile === tile);
 }
 
+/** What a factory on this tile costs: Ore + Coal plus several of the tile's own resource. */
+export function factoryCost(G: GState, tile: number): Partial<Hand> {
+  const r = G.tiles[tile].resource!;
+  return { ...RECIPE.factory, [r]: (RECIPE.factory[r] ?? 0) + FACTORY.tileCost };
+}
+
 /** Build a factory on one of your own tiles: it adds more of that tile's resource every dawn. */
 const planFactory = hostOnly(({ G, playerID }, tile: number) => {
   const p = me(G, playerID);
   if (!p || !Number.isInteger(tile) || !canBuildFactory(G, p, tile)) return INVALID_MOVE;
-  const paid = { ...RECIPE.factory };
+  const paid = factoryCost(G, tile);
   if (!hasGoods(p.hand, paid)) return INVALID_MOVE;
   moveGoods(p.hand, null, paid);
   p.plans.push({ kind: 'factory', tile, good: G.tiles[tile].resource!, paid, gold: 0 });

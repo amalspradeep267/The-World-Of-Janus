@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { BoardProps } from 'boardgame.io/react';
-import { COST, FACTION_INFO, MAX_ROUNDS, MAX_ROUTES_PER_CITY, RECIPE, RESOURCES, RESOURCE_INFO, TRIBUNAL_FROM_ROUND, type NationId } from '../game/constants';
+import { COST, FACTION_INFO, FACTORY, MAX_ROUNDS, MAX_ROUTES_PER_CITY, RECIPE, RESOURCES, RESOURCE_INFO, TRIBUNAL_FROM_ROUND, type NationId } from '../game/constants';
 import { routeCount } from '../game/game';
 import type { GState } from '../game/types';
 import { Avatar, Die, GoldCard, goodsEmoji, Modal, nationIcon, nationName, playerOf, Recipe, ResCard } from './common';
@@ -266,7 +266,9 @@ export function Board(props: BoardProps<GState>) {
         <div className="recipes" title="What night actions cost (day trades are free)">
           <span>✉️ Envoy <Recipe recipe={RECIPE.envoy} hand={me.hand} /></span>
           <span>🤝 Supply line <Recipe recipe={RECIPE.route} hand={me.hand} /></span>
-          <span>🏭 Factory <Recipe recipe={RECIPE.factory} hand={me.hand} /></span>
+          <span>
+            🏭 Factory <span className="cost">{FACTORY.tileCost}× tile + <Recipe recipe={RECIPE.factory} hand={me.hand} /></span>
+          </span>
           <span>🕵️ Spies <span className="cost">🪙{COST.spyGold}</span></span>
         </div>
         <div className="orders">

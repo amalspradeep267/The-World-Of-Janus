@@ -2,7 +2,7 @@ import { Client } from 'boardgame.io/client';
 import { Local } from 'boardgame.io/multiplayer';
 import { describe, expect, it } from 'vitest';
 import { COST, DISTANCE, FACTORY, KIDNAP, SECURITY, MAX_GOODS_PER_ROUTE, MAX_ROUNDS, MAX_ROUTES_PER_CITY, PUMP, RECIPE, RESOURCES, SETUP_TABLE, TARIFF, TRIBUNAL, type Resource } from './constants';
-import { cityDistance, distanceGold, findRoute, handTotal, hasGoods, makeGame, routeCount, smugglePrice } from './game';
+import { cityDistance, distanceGold, factoryCost, findRoute, handTotal, hasGoods, makeGame, routeCount, smugglePrice } from './game';
 import type { GState, Hand } from './types';
 
 function startMatch(n: number, id = `m${n}-${Math.random()}`, revealFaction = true) {
@@ -484,8 +484,7 @@ describe('The World of Janus', () => {
       ...base,
       setup: (ctx: any) => {
         const G = (base.setup as any)(ctx) as GState;
-        G.players['0'].hand.ore += 6;
-        G.players['0'].hand.coal += 6;
+        for (const r of RESOURCES) G.players['0'].hand[r] += 20;
         return G;
       },
     };
@@ -515,6 +514,19 @@ describe('The World of Janus', () => {
     // Base income (1) + the factory, plus any dice hits.
     expect(after.players['0'].harvest.land[good]).toBeGreaterThanOrEqual(1 + FACTORY.yield);
     expect(after.news.at(-1)!.items.some((i) => i.t === 'factory')).toBe(true);
+  });
+
+  it('charges Ore, Coal and several of the tile\'s own resource for a factory', () => {
+    const clients = startMatch(3);
+    allReady(clients); // -> night 1
+    const G = view(clients[0]);
+    const p = G.players['0'];
+    const tile = G.nations[p.nation]!.tiles[1];
+    const cost = factoryCost(G, tile);
+    expect(cost[G.tiles[tile].resource!]).toBeGreaterThanOrEqual(FACTORY.tileCost);
+    // Starting hands can't afford it on night 1 without trading.
+    clients[0].moves.planFactory(tile);
+    expect(view(clients[0]).players['0'].plans).toHaveLength(hasGoods(p.hand, cost) ? 1 : 0);
   });
 
   it('allows one factory per tile, so three per city', () => {
