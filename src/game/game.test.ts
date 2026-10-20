@@ -664,6 +664,23 @@ describe('The World of Janus', () => {
     }
   });
 
+  it('lets the Syndicate launder contraband into the hand by day, then sell it', () => {
+    const { clients, s } = stashMatch();
+    const me = view(clients[s]).players[String(s)];
+    const silk = me.hand.silk;
+    clients[s].moves.launder('silk', 2);
+    const after = view(clients[s]).players[String(s)];
+    expect(after.contraband.silk).toBe(0);
+    expect(after.hand.silk).toBe(silk + 2);
+    const price = view(clients[s]).prices.silk;
+    clients[s].moves.sell('silk', 2);
+    expect(view(clients[s]).players[String(s)].gold).toBe(me.gold + price * 2);
+    const other = (s + 1) % 4;
+    const theirSilk = view(clients[other]).players[String(other)].hand.silk;
+    clients[other].moves.launder('silk', 1); // not the Syndicate: refused
+    expect(view(clients[other]).players[String(other)].hand.silk).toBe(theirSilk);
+  });
+
   it("can't sell contraband at the market", () => {
     const { clients, s } = stashMatch();
     const before = view(clients[s]).players[String(s)];

@@ -268,7 +268,7 @@ export function Board(props: BoardProps<GState>) {
           {RESOURCES.every((r) => me.hand[r] === 0) && <span className="hand-empty">No cards in hand.</span>}
         </div>
         {me.faction === 'syndicate' && RESOURCES.some((r) => me.contraband[r] > 0) && (
-          <div className="stash" title="Smuggled cards: hidden from your public card count. Usable for night actions and trades, not market sales.">
+          <div className="stash" title="Smuggled cards: hidden from your public card count. Usable for night actions and trades; launder them at the market by day to sell.">
             <span className="stash-label">🕶️ Stash</span>
             <div className="hand">
               {RESOURCES.filter((r) => me.contraband[r] > 0).map((r) => (

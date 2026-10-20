@@ -123,11 +123,14 @@ export const SECURITY = { gold: 8 };
 /**
  * Black market (night, Syndicate only): buy a card at the market price times this markup, rounded up.
  * Smuggled cards go into a hidden contraband stash: not in the public card count, usable for night
- * recipes, and offerable in public trades (where they arrive as normal cards), but never sold at market.
+ * recipes, and offerable in public trades (where they arrive as normal cards). To sell them, the Syndicate
+ * first launders them into the hand by day (the card count at dawn then grows unexplained).
  */
-export const SMUGGLE_MARKUP = 1.5;
+// Simulated (smuggle N of the cheapest good + pump, launder and sell next day): pumps lift a price ~25-29%
+// (the nightly cap is 30%), so with these settings 1 card loses a little and 2-4 cards make ~2-6 gold.
+export const SMUGGLE = { markup: 1.0 };
 /** Black market (night, Syndicate only): pay this much gold to fake this many units of demand. */
-export const PUMP = { gold: 6, units: 4 };
+export const PUMP = { gold: 3, units: 4 };
 
 /**
  * 🗡️ Kidnapping (night, Syndicate only): seize a citizen of a city, naming the player you think rules it.

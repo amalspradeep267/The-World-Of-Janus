@@ -155,6 +155,22 @@ export function MarketModal({ G, me, playerID, moves, onClose }: { G: GState; me
       <p className="small muted">Sell cards for gold. Gold pays for spies. Every sale is public, and spies can see how much a city earned, so sales can give you away.</p>
       {G.tariffed[playerID] && <p className="small" style={{ color: 'var(--bad)' }}>🚫 You were exposed by the Tribunal: your sales pay 25% less.</p>}
       <SecurityBox me={me} moves={moves} />
+      {me.faction === 'syndicate' && RESOURCES.some((r) => me.contraband[r] > 0) && (
+        <div className="item stack" style={{ marginTop: 12, background: '#1f2440', border: '1px solid var(--night)' }}>
+          <b>🧺 Launder your stash</b>
+          <span className="small muted">
+            Move smuggled cards into your hand so you can sell them here. Customs won't find them any more, but your card count at dawn
+            will grow with nothing public to explain it.
+          </span>
+          <div className="row">
+            {RESOURCES.filter((r) => me.contraband[r] > 0).map((r) => (
+              <button key={r} onClick={() => moves.launder(r, 1)}>
+                {RESOURCE_INFO[r].emoji} Move 1 to hand ({me.contraband[r]})
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="row" style={{ margin: '6px 0 10px' }}>
         <GoldCard gold={me.gold} small />
       </div>
@@ -200,8 +216,8 @@ export function BlackMarketModal({ G, me, moves, onClose }: { G: GState; me: Pla
   return (
     <Modal icon="🕶️" title="Black market" onClose={onClose}>
       <p className="small muted">
-        Syndicate only. <b>Smuggle</b> a card into your hidden stash: it isn't in your public card count, works for night actions and
-        trades, but can't be sold. <b>Pump</b> a price so you can sell high tomorrow. The news
+        Syndicate only. <b>Smuggle</b> a card into your hidden stash: it isn't in your public card count and works for night actions and
+        trades. To sell it, launder it into your hand by day at the 💰 market. <b>Pump</b> a price so you can sell high tomorrow. The news
         shows the price jump, but not who caused it. Spies <i>can</i> see the gold you spend here, unless you hire security.
       </p>
       <div className="row" style={{ margin: '6px 0 10px' }}>

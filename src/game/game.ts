@@ -25,7 +25,7 @@ import {
   RESOURCES,
   RESOURCE_INFO,
   SETUP_TABLE,
-  SMUGGLE_MARKUP,
+  SMUGGLE,
   SUPPLY_WEIGHT,
   TARIFF,
   START_EACH,
@@ -76,7 +76,7 @@ export const distanceGold = (G: GState, a: NationId, b: NationId) =>
   Math.max(0, cityDistance(G, a, b) - DISTANCE.freeHexes) * DISTANCE.goldPerHex;
 
 /** Price of one card on the black market. */
-export const smugglePrice = (G: GState, r: Resource) => Math.ceil(G.prices[r] * SMUGGLE_MARKUP);
+export const smugglePrice = (G: GState, r: Resource) => Math.ceil(G.prices[r] * SMUGGLE.markup);
 
 function isValidGoods(paid: Partial<Hand>): boolean {
   if (!paid || typeof paid !== 'object') return false;
@@ -639,6 +639,21 @@ const respondTrade = hostOnly(({ G, playerID }, id: number, accept: boolean) => 
   });
 });
 
+/**
+ * Syndicate only, by day: move contraband from the hidden stash into the normal hand ("laundering").
+ * From then on the cards are ordinary: sellable, and invisible to customs. The risk: your card count
+ * at the next dawn grows with nothing public to explain it.
+ */
+const launder = hostOnly(({ G, playerID }, good: Resource, qty: number) => {
+  const p = me(G, playerID);
+  if (!p || p.faction !== 'syndicate' || !RESOURCES.includes(good) || !Number.isInteger(qty) || qty < 1) return INVALID_MOVE;
+  // Cards promised in an open trade offer stay in the stash.
+  const promised = Object.values(p.stashOffers).reduce((n, o) => n + (o[good] ?? 0), 0);
+  if (p.contraband[good] - promised < qty) return INVALID_MOVE;
+  p.contraband[good] -= qty;
+  p.hand[good] += qty;
+});
+
 const cancelTrade = hostOnly(({ G, playerID }, id: number) => {
   const t = G.trades.find((x) => x.id === id);
   if (!t || t.status !== 'open' || t.from !== playerID) return INVALID_MOVE;
@@ -947,7 +962,7 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
         onEnd: endDay,
         endIf: allReady,
         turn: { activePlayers: ActivePlayers.ALL },
-        moves: { setReady, respondEnvoy, proposeTrade, respondTrade, cancelTrade, sell, enterTribunal, vote, armVeto, hireSecurity },
+        moves: { setReady, respondEnvoy, proposeTrade, respondTrade, cancelTrade, sell, launder, enterTribunal, vote, armVeto, hireSecurity },
       },
       night: {
         next: 'day',

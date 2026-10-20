@@ -403,7 +403,7 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
           <tr><td>💰 <strong>Treasury audit</strong></td><td class="cost">🪙 12</td><td>A city's <strong>total gold received and spent</strong> this round. No breakdown, no names: do the maths against the public sales.</td><td><span class="tag all">Spy op</span></td></tr>
           <tr><td>📦 <strong>Customs inspection</strong></td><td class="cost">🪙 10</td><td>Whether a city is holding <strong>smuggled goods</strong>, and how many.</td><td><span class="tag all">Spy op</span></td></tr>
           <tr><td>🔎 <strong>Counter-intelligence</strong></td><td class="cost">🪙 8</td><td>Which cities send spies to <strong>your own city</strong> tonight.</td><td><span class="tag all">Spy op</span></td></tr>
-          <tr><td>🕶️ <strong>Smuggle / Pump</strong></td><td class="cost">🪙 1.5× price / 🪙 6</td><td>Buy a card into a hidden stash, or push a price up for tomorrow.</td><td><span class="tag syn">Syndicate</span></td></tr>
+          <tr><td>🕶️ <strong>Smuggle / Pump</strong></td><td class="cost">🪙 market price / 🪙 3</td><td>Buy a card into a hidden stash, or push a price up for tomorrow.</td><td><span class="tag syn">Syndicate</span></td></tr>
           <tr><td>🗡️ <strong>Kidnap</strong></td><td class="cost">🪙 15</td><td>Seize a citizen of a city by naming its ruler. Right: ransom every dawn. Wrong: you're exposed.</td><td><span class="tag syn">Syndicate</span></td></tr>
         </tbody>
       </table>
@@ -429,14 +429,16 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
 
     <h3>🕶️ Black market (night)</h3>
     <p class="prose">
-      <strong>Smuggle</strong> a card for 1.5× its market price, delivered at dawn into your <strong>hidden contraband stash</strong>. <strong>Pump</strong>
-      a resource for 🪙 6 so its price jumps in the morning, then sell high. Selling right after a spike looks suspicious, though.
+      <strong>Smuggle</strong> a card at its market price, delivered at dawn into your <strong>hidden contraband stash</strong>. <strong>Pump</strong>
+      a resource for 🪙 3 so its price jumps about 25–30% in the morning. The classic scheme: smuggle several of a cheap good, pump it,
+      then launder and sell next day. In simulations, one card loses a little and 3–4 cards make 🪙 4–6. Selling right after a spike is
+      public and looks suspicious, though.
     </p>
     <div class="flow">
       <div class="row"><span class="k">🙈</span><div><strong>Off the books.</strong> Stash cards aren't in your public card count.</div></div>
       <div class="row"><span class="k">🌙</span><div><strong>Usable at night.</strong> Envoys, supply lines and factories take stash cards first, so your visible hand doesn't shrink.</div></div>
       <div class="row"><span class="k">🔁</span><div><strong>Tradable, with a warning.</strong> You can slip stash cards into a public trade. They arrive as ordinary goods, so customs finds nothing on the other player. But at dawn your card count won't match what the public record suggests, and sharp players may notice.</div></div>
-      <div class="row"><span class="k">🚫</span><div><strong>Never sold.</strong> Stash cards can't be sold at the market.</div></div>
+      <div class="row"><span class="k">🧺</span><div><strong>Launder to sell.</strong> By day, move stash cards into your hand at the market. Then they're ordinary cards you can sell, and customs can't find them, but your card count at dawn grows with nothing public to explain it.</div></div>
       <div class="row"><span class="k">📦</span><div><strong>Customs can find them</strong>, unless you hired security that night.</div></div>
     </div>
 
@@ -542,7 +544,7 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
       <div><b>4 · 8 · 10</b><span>Tribunal entry · innocent fine · veto</span></div>
       <div><b>5 · 25%</b><span>tariff per trade · sale cut once exposed</span></div>
       <div><b>15 · 5</b><span>kidnap cost · ransom per dawn</span></div>
-      <div><b>8 · 6</b><span>security · price pump</span></div>
+      <div><b>8 · 3</b><span>security · price pump</span></div>
       <div><b>⛏️🔥</b><span>factory cost, for +1 each time its tile is rolled</span></div>
     </div>
   </section>
