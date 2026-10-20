@@ -182,7 +182,7 @@ export function TribunalModal({ G, me, playerID, moves, onClose }: { G: GState; 
       ) : (
         <>
           <div className="step">
-            Accuse · 🪙{TRIBUNAL.voteGold} to vote{' '}
+            Accuse{' '}
             <span className="muted small">{convenes ? `(${majority} of ${entrants.length} entrants needed)` : '(waiting for more entrants)'}</span>
           </div>
           <div className="pick-grid">
@@ -191,13 +191,12 @@ export function TribunalModal({ G, me, playerID, moves, onClose }: { G: GState; 
               .map((p) => {
                 const count = entrants.filter((e) => G.votes[e.id] === p.id).length;
                 const rev = G.revealed[p.id];
-                const cantAfford = myVote == null && me.gold < TRIBUNAL.voteGold;
                 return (
                   <div
                     key={p.id}
                     className={`pickable ${myVote === p.id ? 'on' : ''}`}
-                    style={{ opacity: rev || cantAfford ? 0.5 : 1, cursor: rev || cantAfford ? 'default' : 'pointer' }}
-                    onClick={() => !rev && !cantAfford && moves.vote(myVote === p.id ? null : p.id)}
+                    style={{ opacity: rev ? 0.5 : 1, cursor: rev ? 'default' : 'pointer' }}
+                    onClick={() => !rev && moves.vote(myVote === p.id ? null : p.id)}
                   >
                     <Avatar name={p.name} size={46} />
                     <small>{p.name}</small>
@@ -215,7 +214,7 @@ export function TribunalModal({ G, me, playerID, moves, onClose }: { G: GState; 
               })}
           </div>
           <p className="small muted" style={{ marginTop: 10 }}>
-            {myVote ? 'Click your accused again to withdraw (refunds the vote).' : 'You have not accused anyone.'}
+            {myVote ? 'Click your accused again to withdraw. You can change your vote until dusk.' : 'You have not accused anyone.'}
           </p>
           {me.faction === 'trader' && (
             <div className="item stack" style={{ marginTop: 12, background: '#2e2a1c', border: '1px solid var(--gold)' }}>

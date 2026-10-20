@@ -35,10 +35,10 @@ export const TARIFF = { tradeGold: 5, saleCut: 0.25 };
 
 /**
  * The Tribunal: players pay to enter; it convenes with at least `minEntrants`.
- * Entrants pay to cast a vote, and a majority of entrants exposes the accused.
+ * Entrants vote for free, and a majority of entrants exposes the accused.
  * Voters who expose an innocent are fined. The Free Trader may arm a secret veto.
  */
-export const TRIBUNAL = { entryGold: 4, voteGold: 3, minEntrants: 3, innocentFine: 8, vetoGold: 10 };
+export const TRIBUNAL = { entryGold: 4, minEntrants: 3, innocentFine: 8, vetoGold: 10 };
 
 export const FACTION_INFO: Record<Faction, { label: string; goal: string }> = {
   syndicate: {

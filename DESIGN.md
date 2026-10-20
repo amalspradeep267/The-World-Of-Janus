@@ -61,7 +61,7 @@ The Syndicate alone can use the 🕶️ black market. The Free Trader's goal nee
 |---|---|
 | Enter | Pay 4 gold to join today's Tribunal, or abstain |
 | Convene | It sits at dusk only if **3+ players** entered; otherwise every fee is refunded |
-| Vote | Only entrants vote. Casting a vote costs 3 gold (switching is free; withdrawing refunds it). Anyone can be accused, entrant or not |
+| Vote | Only entrants vote, for free; votes can change until dusk. Anyone can be accused, entrant or not |
 | Verdict | A **majority of entrants** exposes the accused: their city is revealed, and they pay a 🚫 **tariff** from then on (5 gold per trade, 25% less from sales) |
 | Innocent exposed | Everyone who voted for them is fined **8 gold** |
 | 🟡 Veto | The Free Trader, if inside, can secretly arm a veto (10 gold, refunded if there's no verdict). It strikes the verdict down; the news says only "a secret veto" |
@@ -87,8 +87,7 @@ Exposing every Syndicate member wins the game for the Concord immediately. All T
 - Hosting: static site on GitHub Pages plus peer-to-peer (the host's browser runs the game). No server.
 
 ## Known issues
-- **Watch whether the Tribunal is still brute-forceable.** Entry fees, vote costs and 8-gold fines for wrong accusations make guessing expensive, but a rich table might still cycle through suspects. Tune `TRIBUNAL` in constants.ts after playtests.
-- **The Free Trader's veto is costly early on.** After entering and voting, a Free Trader on starting gold can't afford the 10-gold veto; they need to sell cards first.
+- **Watch whether the Tribunal is still brute-forceable.** Entry fees and 8-gold fines for wrong accusations make guessing expensive, but a rich table might still cycle through suspects. Tune `TRIBUNAL` in constants.ts after playtests.
 - **The Syndicate is passive until War.** It wins by staying hidden.
 
 ## Roadmap

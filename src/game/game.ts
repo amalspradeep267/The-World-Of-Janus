@@ -204,7 +204,6 @@ function resolveTribunal(G: GState) {
   if (entrants.length === 0) return;
   if (entrants.length < TRIBUNAL.minEntrants) {
     for (const pid of entrants) unspend(G, pid, TRIBUNAL.entryGold);
-    for (const pid of entrants) if (G.votes[pid] != null) unspend(G, pid, TRIBUNAL.voteGold);
     for (const pid of entrants) if (G.players[pid].veto) unspend(G, pid, G.players[pid].veto);
     G.verdicts.push({ round: G.round, convened: false, target: null, vetoed: false, fined: [] });
     G.publicLog.push({
@@ -504,17 +503,10 @@ const enterTribunal = hostOnly(({ G, playerID }) => {
   G.entrants[playerID!] = true;
 });
 
-/** Entrants vote; the first vote costs gold, switching is free, withdrawing refunds it. */
+/** Entrants vote for free (entry is the only fee); they can switch or withdraw until dusk. */
 const vote = hostOnly(({ G, playerID }, target: PlayerID | null) => {
-  const p = me(G, playerID);
-  if (!p || G.round < TRIBUNAL_FROM_ROUND || !G.entrants[playerID!]) return INVALID_MOVE;
+  if (!me(G, playerID) || G.round < TRIBUNAL_FROM_ROUND || !G.entrants[playerID!]) return INVALID_MOVE;
   if (target != null && (target === playerID || !G.players[target] || G.revealed[target])) return INVALID_MOVE;
-  const had = G.votes[playerID!] != null;
-  if (target != null && !had) {
-    if (p.gold < TRIBUNAL.voteGold) return INVALID_MOVE;
-    spend(G, playerID!, TRIBUNAL.voteGold);
-  }
-  if (target == null && had) unspend(G, playerID!, TRIBUNAL.voteGold);
   G.votes[playerID!] = target;
 });
 

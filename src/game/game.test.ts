@@ -306,7 +306,7 @@ describe('The World of Janus', () => {
     const v = view(clients[0]).verdicts.at(-1)!;
     expect(v.target).toBe(String(innocent));
     expect([...v.fined].sort()).toEqual(voters.map(String).sort());
-    voters.forEach((i, k) => expect(gold(clients[i], i)).toBe(before[k] - TRIBUNAL.entryGold - TRIBUNAL.voteGold - TRIBUNAL.innocentFine));
+    voters.forEach((i, k) => expect(gold(clients[i], i)).toBe(before[k] - TRIBUNAL.entryGold - TRIBUNAL.innocentFine));
   });
 
   it("lets the Free Trader's secret veto strike a verdict down", () => {
