@@ -103,6 +103,7 @@ select, input { font: inherit; color: var(--text); background: var(--panel-2); b
 .avatar .tariff { position: absolute; left: -5px; top: -5px; font-size: 12px; line-height: 1; }
 
 .ready-btn { min-width: 150px; }
+.ready-count { font-weight: 700; color: var(--night); background: #ffffff10; border-radius: 999px; padding: 6px 12px; white-space: nowrap; }
 .icon-btn { font-size: 18px; padding: 6px 8px; border-color: transparent; }
 
 /* ---------- stage (map area) ---------- */

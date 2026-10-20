@@ -883,13 +883,17 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
     endIf: ({ G }) => G.result ?? undefined,
 
     // Each player sees only their own secrets, plus whatever they have learned.
-    playerView: ({ G, playerID }) => {
+    playerView: ({ G, ctx, playerID }) => {
       if (G.result) return G;
       const mine = playerID != null ? G.players[playerID] : undefined;
       const owners: GState['owners'] = {};
       if (mine) Object.assign(owners, mine.known);
       for (const [pid, rev] of Object.entries(G.revealed)) owners[rev.nation] = pid;
-      return { ...G, owners, players: mine ? { [playerID!]: mine } : {}, ledgers: {}, kidnaps: [] };
+      // At night, who is still busy would hint at who has secret work to do (the Syndicate),
+      // so clients only learn how many players are ready, plus their own status.
+      const readyCount = G.roster.filter((p) => G.ready[p.id]).length;
+      const ready = ctx.phase === 'night' ? (playerID != null && G.ready[playerID] ? { [playerID]: true } : {}) : G.ready;
+      return { ...G, owners, players: mine ? { [playerID!]: mine } : {}, ledgers: {}, kidnaps: [], ready, readyCount };
     },
   };
 }

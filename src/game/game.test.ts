@@ -536,4 +536,15 @@ describe('The World of Janus', () => {
     for (const t of G.nations[G.players['0'].nation]!.tiles) clients[0].moves.planFactory(t);
     expect(view(clients[0]).players['0'].plans.filter((p) => p.kind === 'factory')).toHaveLength(3);
   });
+
+  it('hides who is ready at night, showing only the count', () => {
+    const clients = startMatch(4);
+    allReady(clients); // -> night 1
+    clients[0].moves.setReady(true);
+    clients[1].moves.setReady(true);
+    const G2 = view(clients[2]);
+    expect(G2.readyCount).toBe(2);
+    expect(Object.keys(G2.ready)).toHaveLength(0); // player 2 isn't ready, and can't see who is
+    expect(view(clients[0]).ready).toEqual({ '0': true }); // you still see your own status
+  });
 });

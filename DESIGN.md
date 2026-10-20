@@ -53,6 +53,7 @@ Anyone, Syndicate or Concord, whose city reaches **7 supply lines** (goods opene
 ### Limits and distance
 - Each city can have at most **4 connections**, and each connection at most **2 supply lines** (goods).
 - **Distance costs gold.** Envoys and supply lines cost 2 gold per hex between the two capitals beyond the first 2 hexes, up to about 8 gold across the map. Travel gold shows up in spy reports.
+- **At night, nobody sees who is ready**, only "4/5 ready": the last players still busy would otherwise point at the Syndicate. Clients don't even receive who is ready. By day, ready ticks are shown per player.
 - Everyone's **card count** (not which cards) is public. It updates at dawn and after public trades or sales, never mid-night.
 
 ## Money and markets

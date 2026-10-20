@@ -147,15 +147,21 @@ export function Board(props: BoardProps<GState>) {
         </div>
         <span className="spacer" />
         {!isConnected && <span className="small" style={{ color: 'var(--bad)' }}>⚠ Reconnecting…</span>}
+        {phase === 'night' && (
+          <span className="ready-count" title="Who is ready stays secret at night">
+            🌙 {G.readyCount ?? 0}/{G.roster.length} ready
+          </span>
+        )}
         <div className="avatars">
           {G.roster.map((p) => (
             <Avatar
               key={p.id}
               name={p.name}
-              ready={!!G.ready[p.id]}
+              // At night nobody sees who is ready, only the count above.
+              ready={phase === 'day' ? !!G.ready[p.id] : undefined}
               cards={G.handSizes[p.id]}
               tariffed={G.tariffed[p.id]}
-              title={`${p.name} · ${G.handSizes[p.id] ?? 0} cards${G.tariffed[p.id] ? ' · tariffed' : ''}${G.ready[p.id] ? ' · ready' : ''}`}
+              title={`${p.name} · ${G.handSizes[p.id] ?? 0} cards${G.tariffed[p.id] ? ' · tariffed' : ''}${phase === 'day' && G.ready[p.id] ? ' · ready' : ''}`}
             />
           ))}
         </div>

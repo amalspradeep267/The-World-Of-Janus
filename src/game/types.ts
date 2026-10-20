@@ -157,6 +157,8 @@ export interface GState {
   votes: Record<PlayerID, PlayerID | null>;
   settings: Settings;
   ready: Record<PlayerID, boolean>;
+  /** Filled in by playerView: how many players are ready. At night it's all a client gets (see playerView). */
+  readyCount?: number;
   /** Public card count per player (not which cards), so hoarding can be spotted. */
   handSizes: Record<PlayerID, number>;
   /** faction is null when the host keeps exposed factions secret. */
