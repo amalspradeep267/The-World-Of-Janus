@@ -227,7 +227,7 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
         <ul>
           <li>Everyone knows <strong>who is playing</strong>.</li>
           <li>Everything you do <strong>by day</strong> is public and signed with your name: trades, sales, Tribunal votes.</li>
-          <li>Your <strong>card count</strong> is public (not which cards).</li>
+          <li>Your <strong>card count</strong> is public (not which cards). It updates once a day, at dawn.</li>
         </ul>
       </div>
       <div class="mask" aria-hidden="true">🎭</div>
@@ -350,7 +350,7 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
     <span class="eyebrow">2 · Rounds</span>
     <h2>A round, step by step</h2>
     <div class="cycle">
-      <div class="step day"><span class="ic">🎲</span><b>Harvest</b><span>A 12-sided die picks which tiles produce extra.</span><span class="who">Automatic</span></div>
+      <div class="step day"><span class="ic">🎲</span><b>Harvest</b><span>Three 12-sided dice pick which tiles produce.</span><span class="who">Automatic</span></div>
       <div class="step day"><span class="ic">☀️</span><b>Day</b><span>Talk on Discord. Trade, sell, enter the Tribunal.</span><span class="who">Public, by name</span></div>
       <div class="step day"><span class="ic">⚖️</span><b>Dusk</b><span>The Tribunal rules, if it sat (from day 3).</span><span class="who">Public</span></div>
       <div class="step night"><span class="ic">🌙</span><b>Night</b><span>Envoys, supply lines, factories, spies, Syndicate schemes.</span><span class="who">Secret, by city</span></div>
@@ -399,15 +399,18 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
         <tbody>
           <tr><td>✉️ <strong>Envoy</strong></td><td class="cost">🌾 + 🐑 + travel</td><td>Ask another city to connect. If they accept, you're connected and <em>they alone</em> learn who sent it. Unanswered envoys expire after a day and a night.</td><td><span class="tag all">Everyone</span></td></tr>
           <tr><td>🤝 <strong>Supply line</strong></td><td class="cost">🪵 + 🪨 + travel</td><td>Pick a good on a connection. From then on, whenever either city produces it, the other gets 1 too. Max 2 per connection.</td><td><span class="tag all">Everyone</span></td></tr>
-          <tr><td>🏭 <strong>Factory</strong></td><td class="cost">5 of the tile's resource + ⛏️ + 🔥</td><td>Built on one of your own tiles: that tile makes <strong>+1 every dawn</strong>, whatever the die rolls. One per tile. Output also flows down supply lines.</td><td><span class="tag all">Everyone</span></td></tr>
-          <tr><td>🕵️ <strong>Spies</strong></td><td class="cost">🪙 12</td><td>Report one city's <strong>total gold received and spent</strong> this round. No breakdown, no names: do the maths against the public sales.</td><td><span class="tag all">Everyone</span></td></tr>
-          <tr><td>🕶️ <strong>Smuggle / Pump</strong></td><td class="cost">🪙 1.5× price / 🪙 6</td><td>Buy a card secretly, or push a price up for tomorrow.</td><td><span class="tag syn">Syndicate</span></td></tr>
+          <tr><td>🏭 <strong>Factory</strong></td><td class="cost">⛏️ + 🔥</td><td>Built on one of your own tiles: <strong>+1 extra each time that tile is rolled</strong>. One per tile. Output also flows down supply lines.</td><td><span class="tag all">Everyone</span></td></tr>
+          <tr><td>💰 <strong>Treasury audit</strong></td><td class="cost">🪙 12</td><td>A city's <strong>total gold received and spent</strong> this round. No breakdown, no names: do the maths against the public sales.</td><td><span class="tag all">Spy op</span></td></tr>
+          <tr><td>📦 <strong>Customs inspection</strong></td><td class="cost">🪙 10</td><td>Whether a city is holding <strong>smuggled goods</strong>, and how many.</td><td><span class="tag all">Spy op</span></td></tr>
+          <tr><td>🔎 <strong>Counter-intelligence</strong></td><td class="cost">🪙 8</td><td>Which cities send spies to <strong>your own city</strong> tonight.</td><td><span class="tag all">Spy op</span></td></tr>
+          <tr><td>🕶️ <strong>Smuggle / Pump</strong></td><td class="cost">🪙 1.5× price / 🪙 6</td><td>Buy a card into a hidden stash, or push a price up for tomorrow.</td><td><span class="tag syn">Syndicate</span></td></tr>
           <tr><td>🗡️ <strong>Kidnap</strong></td><td class="cost">🪙 15</td><td>Seize a citizen of a city by naming its ruler. Right: ransom every dawn. Wrong: you're exposed.</td><td><span class="tag syn">Syndicate</span></td></tr>
         </tbody>
       </table>
     </div>
     <p class="prose small muted">
-      <strong>Travel gold:</strong> envoys and supply lines cost 🪙 2 for each hex between the two capitals beyond the first 2, up to about
+      <strong>Spy operations:</strong> anyone can run up to <strong>2 a night</strong>, in any mix. The news reports "spies spotted" in each city
+      audited or inspected, never who sent them. <strong>Travel gold:</strong> envoys and supply lines cost 🪙 2 for each hex between the two capitals beyond the first 2, up to about
       🪙 8 across the map. <strong>Limits:</strong> a city can have at most 4 connections.
     </p>
     <div class="shots">
@@ -426,9 +429,16 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
 
     <h3>🕶️ Black market (night)</h3>
     <p class="prose">
-      <strong>Smuggle</strong> a card for 1.5× its market price, delivered at dawn, without trading for it in public. <strong>Pump</strong> a
-      resource for 🪙 6 so its price jumps in the morning, then sell high. Selling right after a spike looks suspicious, though.
+      <strong>Smuggle</strong> a card for 1.5× its market price, delivered at dawn into your <strong>hidden contraband stash</strong>. <strong>Pump</strong>
+      a resource for 🪙 6 so its price jumps in the morning, then sell high. Selling right after a spike looks suspicious, though.
     </p>
+    <div class="flow">
+      <div class="row"><span class="k">🙈</span><div><strong>Off the books.</strong> Stash cards aren't in your public card count.</div></div>
+      <div class="row"><span class="k">🌙</span><div><strong>Usable at night.</strong> Envoys, supply lines and factories take stash cards first, so your visible hand doesn't shrink.</div></div>
+      <div class="row"><span class="k">🔁</span><div><strong>Tradable, with a warning.</strong> You can slip stash cards into a public trade. They arrive as ordinary goods, so customs finds nothing on the other player. But at dawn your card count won't match what the public record suggests, and sharp players may notice.</div></div>
+      <div class="row"><span class="k">🚫</span><div><strong>Never sold.</strong> Stash cards can't be sold at the market.</div></div>
+      <div class="row"><span class="k">📦</span><div><strong>Customs can find them</strong>, unless you hired security that night.</div></div>
+    </div>
 
     <h3>🗡️ Kidnapping (night, one per night)</h3>
     <p class="prose">
@@ -443,9 +453,9 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
 
     <h3>🛡️ Hired security (day or night)</h3>
     <p class="prose">
-      For 🪙 8, any spies sent to your city <em>that night</em> are bribed. Their report leaves out your illegal gold (ransom income, black
-      market and kidnapping costs, and the security fee itself) but still shows legal sales and spending, so nothing looks suspiciously empty.
-      Nobody is told it was hired.
+      For 🪙 8, any spies sent to your city <em>that night</em> are bribed. A treasury audit leaves out your illegal gold (ransom income, black
+      market and kidnapping costs, and the security fee itself) but still shows legal sales and spending. A customs inspection reports
+      "nothing suspicious", exactly as it would for a clean city. Nobody is told security was hired, so a clean report proves nothing.
     </p>
 
     <div class="shots">
@@ -458,9 +468,8 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
     <span class="eyebrow">6 · Economy</span>
     <h2>Harvest, prices and gold</h2>
     <div class="flow">
-      <div class="row"><span class="k">🌱</span><div><strong>Base income.</strong> Every dawn your city gets +1 of each of its 3 resources, whatever the die says.</div></div>
-      <div class="row"><span class="k">🎲</span><div><strong>The d12.</strong> One 12-sided die is rolled. Every tile showing that number yields +2. Each number from 1 to 12 is equally likely, and a city's 3 tiles always have 3 different numbers.</div></div>
-      <div class="row"><span class="k">🏭</span><div><strong>Factories</strong> add +1 of their tile's resource every dawn.</div></div>
+      <div class="row"><span class="k">🎲</span><div><strong>Three d12.</strong> Every dawn three 12-sided dice are rolled. <strong>Only tiles showing a rolled number produce</strong>: +1 per die that matches. Each number is equally likely, and a city's 3 tiles always have 3 different numbers. A city gets about 0.75 cards a dawn on average, so cards are scarce and every trade matters.</div></div>
+      <div class="row"><span class="k">🏭</span><div><strong>Factories</strong> add +1 more each time their tile is rolled.</div></div>
       <div class="row"><span class="k">🤝</span><div><strong>Supply lines</strong> then share: if your partner produced a shared good this dawn, you get 1 too.</div></div>
     </div>
     <h3>Prices</h3>
@@ -499,8 +508,9 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
     <div class="clues">
       <div class="clue"><span class="ic">🔁</span><b>Who needs what</b><span>Envoys need 🌾 + 🐑. Whoever traded for Grain and Wool today probably sent tonight's envoy.</span></div>
       <div class="clue"><span class="ic">🗺️</span><b>What a city makes</b><span>Each city's 3 resources are public. What someone gives away points to a few possible cities.</span></div>
+      <div class="clue"><span class="ic">📦</span><b>Customs and the dice</b><span>The dice and each city's tiles are public, so you can work out what each city harvested. Cards that appear from nowhere may be smuggled.</span></div>
       <div class="clue"><span class="ic">🕵️</span><b>Spies vs. sales</b><span>"Rio received 44 gold" while its ruler only sold 34 in public: the extra gold came from somewhere.</span></div>
-      <div class="clue"><span class="ic">🃏</span><b>Card counts</b><span>Public counts show who's hoarding. They only update at dawn and after public deals.</span></div>
+      <div class="clue"><span class="ic">🃏</span><b>Card counts</b><span>Public counts show who's hoarding. They only update at dawn, so a single deal can't be traced in the moment.</span></div>
       <div class="clue"><span class="ic">📈</span><b>Market moves</b><span>Only the Syndicate can pump prices. A spike nobody can explain is a clue.</span></div>
       <div class="clue"><span class="ic">🏭</span><b>Factories and lines</b><span>Both show on the map. Whoever suddenly has spare Silk might rule the city with the Silk factory.</span></div>
       <div class="clue"><span class="ic">✉️</span><b>Accepted envoys</b><span>Accepting an envoy tells you, and only you, who sent it.</span></div>
@@ -524,16 +534,16 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
     <div class="sheet">
       <div><b>6</b><span>rounds; the Tribunal opens on day 3</span></div>
       <div><b>15 / 10</b><span>starting gold / starting card price</span></div>
-      <div><b>+1 · +2</b><span>base income per resource · per d12 hit</span></div>
+      <div><b>3 · +1</b><span>d12 rolled each dawn · per matching tile</span></div>
       <div><b>4 · 2</b><span>max connections per city · supply lines per connection</span></div>
       <div><b>7</b><span>supply lines for the Free Trader title</span></div>
       <div><b>2 / hex</b><span>travel gold beyond 2 hexes</span></div>
-      <div><b>12</b><span>gold per spy report</span></div>
+      <div><b>12 · 10 · 8</b><span>treasury audit · customs · counter-intel (max 2 a night)</span></div>
       <div><b>4 · 8 · 10</b><span>Tribunal entry · innocent fine · veto</span></div>
       <div><b>5 · 25%</b><span>tariff per trade · sale cut once exposed</span></div>
       <div><b>15 · 5</b><span>kidnap cost · ransom per dawn</span></div>
       <div><b>8 · 6</b><span>security · price pump</span></div>
-      <div><b>5 + ⛏️🔥</b><span>factory cost (of the tile's resource) for +1 a dawn</span></div>
+      <div><b>⛏️🔥</b><span>factory cost, for +1 each time its tile is rolled</span></div>
     </div>
   </section>
 
@@ -632,6 +642,18 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
           <li>At night, only the number of ready players is shown.</li>
         </ul>
       </div>
+      <div class="entry">
+        <span class="when">20 Oct · after the first feedback</span>
+        <h3>Scarcer harvests, a contraband stash and spy operations</h3>
+        <ul>
+          <li><strong>Harvest:</strong> three d12 each dawn, and only rolled tiles produce (+1 per hit). There's no more free income.</li>
+          <li><strong>Factories</strong> now pay +1 when their tile is rolled and cost just Ore + Coal. A simulation showed anything pricier never pays back in 6 rounds.</li>
+          <li><strong>Contraband stash:</strong> smuggled cards are hidden from the card count and can be traded as ordinary goods, with a risk warning.</li>
+          <li><strong>Card counts</strong> now update only at dawn.</li>
+          <li><strong>Spy operations:</strong> up to 2 a night, choosing from treasury audit, customs inspection and counter-intelligence.</li>
+        </ul>
+        <p class="why">Playtesters found resources too plentiful to track, and card counts gave smugglers away.</p>
+      </div>
     </div>
   </section>
 
@@ -642,10 +664,11 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
     <ol class="questions">
       <li><strong>Envoy reveals.</strong> Accepting an envoy tells you who sent it. Should identity come only from trading and the Tribunal instead?</li>
       <li><strong>Ransom strength.</strong> 🪙 5 a dawn with no cap can bankrupt a player. Cap it, or limit how long it lasts?</li>
-      <li><strong>Factory model.</strong> +1 every dawn (current, pricier), or +1 only when the die hits that tile (cheaper)?</li>
+      <li><strong>Silk has no use.</strong> A simulation shows Silk is worth the least: no recipe needs it. Should it be a wildcard, pay for spycraft, or sell at a premium?</li>
+      <li><strong>Factories.</strong> They now cost only Ore + Coal and barely pay back over 6 rounds. Should they pay +2 per hit, or should games run longer?</li>
       <li><strong>Free Trader perks.</strong> Should the title do more than the veto: a discount, income, or counting toward a win?</li>
       <li><strong>Three-player Tribunal.</strong> With 3 players, all three must enter, so anyone can block it. Is that okay?</li>
-      <li><strong>The first night.</strong> Do strict recipes leave people with nothing to do on night 1?</li>
+      <li><strong>The economy.</strong> At about 0.75 cards a dawn, is it tight in a fun way, or too slow? (+2 per hit is an easy switch.)</li>
       <li><strong>A passive Syndicate.</strong> Until War, the Syndicate wins by staying hidden. Do they have enough to do?</li>
     </ol>
   </section>

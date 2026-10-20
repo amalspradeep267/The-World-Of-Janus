@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { BoardProps } from 'boardgame.io/react';
-import { COST, FACTION_INFO, FACTORY, MAX_ROUNDS, MAX_ROUTES_PER_CITY, RECIPE, RESOURCES, RESOURCE_INFO, TRIBUNAL_FROM_ROUND, type NationId } from '../game/constants';
-import { routeCount } from '../game/game';
+import { FACTION_INFO, FACTORY, SPY, MAX_ROUNDS, MAX_ROUTES_PER_CITY, RECIPE, RESOURCES, RESOURCE_INFO, TRIBUNAL_FROM_ROUND, type NationId } from '../game/constants';
+import { routeCount, spendable } from '../game/game';
 import type { GState } from '../game/types';
 import { Avatar, Die, GoldCard, goodsEmoji, Modal, nationIcon, nationName, playerOf, Recipe, ResCard } from './common';
 import { HexMap } from './HexMap';
@@ -161,7 +161,7 @@ export function Board(props: BoardProps<GState>) {
               ready={phase === 'day' ? !!G.ready[p.id] : undefined}
               cards={G.handSizes[p.id]}
               tariffed={G.tariffed[p.id]}
-              title={`${p.name} · ${G.handSizes[p.id] ?? 0} cards${G.tariffed[p.id] ? ' · tariffed' : ''}${phase === 'day' && G.ready[p.id] ? ' · ready' : ''}`}
+              title={`${p.name} · ${G.handSizes[p.id] ?? 0} cards at dawn${G.tariffed[p.id] ? ' · tariffed' : ''}${phase === 'day' && G.ready[p.id] ? ' · ready' : ''}`}
             />
           ))}
         </div>
@@ -243,11 +243,10 @@ export function Board(props: BoardProps<GState>) {
         </nav>
 
         {G.rolls.length > 0 && (
-          <div className="dice-tray" title="This morning's harvest roll (d12): tiles with this number produce">
+          <div className="dice-tray" title="This morning's three d12: only tiles showing a rolled number produce">
             {G.rolls.map((n, i) => (
               <div key={`${G.round}-${i}`} className="dice-pair">
-                <Die value={n} size={84} rolling />
-                <span className="small muted">d12</span>
+                <Die value={n} size={64} rolling delay={i * 140} />
               </div>
             ))}
           </div>
@@ -268,14 +267,24 @@ export function Board(props: BoardProps<GState>) {
           ))}
           {RESOURCES.every((r) => me.hand[r] === 0) && <span className="hand-empty">No cards in hand.</span>}
         </div>
+        {me.faction === 'syndicate' && RESOURCES.some((r) => me.contraband[r] > 0) && (
+          <div className="stash" title="Smuggled cards: hidden from your public card count. Usable for night actions and trades, not market sales.">
+            <span className="stash-label">🕶️ Stash</span>
+            <div className="hand">
+              {RESOURCES.filter((r) => me.contraband[r] > 0).map((r) => (
+                <ResCard key={r} res={r} small count={me.contraband[r]} />
+              ))}
+            </div>
+          </div>
+        )}
         <GoldCard gold={me.gold} />
         <div className="recipes" title="What night actions cost (day trades are free)">
-          <span>✉️ Envoy <Recipe recipe={RECIPE.envoy} hand={me.hand} /></span>
-          <span>🤝 Supply line <Recipe recipe={RECIPE.route} hand={me.hand} /></span>
+          <span>✉️ Envoy <Recipe recipe={RECIPE.envoy} hand={spendable(me)} /></span>
+          <span>🤝 Supply line <Recipe recipe={RECIPE.route} hand={spendable(me)} /></span>
           <span>
-            🏭 Factory <span className="cost">{FACTORY.tileCost}× tile + <Recipe recipe={RECIPE.factory} hand={me.hand} /></span>
+            🏭 Factory <span className="cost">{FACTORY.tileCost > 0 && <>{FACTORY.tileCost}× tile + </>}<Recipe recipe={RECIPE.factory} hand={spendable(me)} /></span>
           </span>
-          <span>🕵️ Spies <span className="cost">🪙{COST.spyGold}</span></span>
+          <span>🕵️ Spies <span className="cost">🪙{SPY.customs}–{SPY.treasury}</span></span>
         </div>
         <div className="orders">
           {phase === 'night' && me.plans.length === 0 && !me.security && <span className="small muted">No orders tonight yet</span>}
@@ -290,8 +299,9 @@ export function Board(props: BoardProps<GState>) {
               {p.kind === 'envoy' && <>✉️ Envoy ➜ {nationIcon(G, p.to)}</>}
               {p.kind === 'route' && <>🤝 {RESOURCE_INFO[p.good].emoji} supply line ➜ {nationIcon(G, p.with)}</>}
               {p.kind === 'factory' && <>🏭 Factory on your {RESOURCE_INFO[p.good].emoji} tile</>}
-              {p.kind === 'spy' && <>🕵️ Spy on {nationIcon(G, p.nation)}'s treasury</>}
-              {p.kind === 'smuggle' && <>🕶️ Smuggle {RESOURCE_INFO[p.good].emoji}</>}
+              {p.kind === 'spy' && <>{p.op === 'treasury' ? '💰 Audit' : '📦 Customs'} {nationIcon(G, p.nation)}</>}
+              {p.kind === 'counter' && <>🔎 Counter-intelligence</>}
+              {p.kind === 'smuggle' && <>🕶️ Smuggle {RESOURCE_INFO[p.good].emoji} to stash</>}
               {p.kind === 'pump' && <>🕶️ Pump {RESOURCE_INFO[p.good].emoji} ▲</>}
               {p.kind === 'kidnap' && <>🗡️ Kidnap in {nationIcon(G, p.nation)}, ruler: <Avatar name={playerOf(G, p.suspect).name} size={20} /></>}
               <button className="tiny ghost" onClick={() => moves.cancelPlan(i)} title="Cancel and get your cards back">✕</button>

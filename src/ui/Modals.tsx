@@ -12,7 +12,11 @@ export function TradeModal({ G, me, playerID, moves, onClose }: { G: GState; me:
   const others = G.roster.filter((p) => p.id !== playerID);
   const [to, setTo] = useState<string | null>(null);
   const [give, setGive] = useState<Partial<Hand>>({});
+  const [stash, setStash] = useState<Partial<Hand>>({});
   const [get, setGet] = useState<Partial<Hand>>({});
+  const hasStash = me.faction === 'syndicate' && RESOURCES.some((r) => me.contraband[r] > 0);
+  const total = (r: Resource) => (give[r] ?? 0) + (stash[r] ?? 0);
+  const allGive = Object.fromEntries(RESOURCES.map((r) => [r, total(r)])) as Partial<Hand>;
   const mineOpen = G.trades.filter((t) => t.from === playerID && t.status === 'open');
   const add = (h: Partial<Hand>, set: (h: Partial<Hand>) => void, r: Resource, d: number, max = 99) =>
     set({ ...h, [r]: Math.max(0, Math.min(max, (h[r] ?? 0) + d)) });
@@ -46,6 +50,29 @@ export function TradeModal({ G, me, playerID, moves, onClose }: { G: GState; me:
         ))}
         {handTotal(give) > 0 && <button className="tiny ghost" onClick={() => setGive({})}>clear</button>}
       </div>
+      {hasStash && (
+        <>
+          <div className="step">🕶️ Or from your contraband stash</div>
+          <div className="row pick-cards">
+            {RESOURCES.filter((r) => me.contraband[r] > 0).map((r) => (
+              <PickCard
+                key={r}
+                res={r}
+                picked={stash[r] ?? 0}
+                have={me.contraband[r]}
+                onAdd={() => add(stash, setStash, r, 1, me.contraband[r])}
+                onRemove={() => add(stash, setStash, r, -1)}
+              />
+            ))}
+          </div>
+          {handTotal(stash) > 0 && (
+            <p className="small" style={{ color: 'var(--bad)' }}>
+              ⚠️ Risky: the trade looks normal and the card arrives as an ordinary good, but your card count at dawn won't add up the way the
+              public record suggests. Sharp-eyed players may notice.
+            </p>
+          )}
+        </>
+      )}
 
       <div className="step"><i>3</i> You want</div>
       <div className="row pick-cards">
@@ -57,14 +84,15 @@ export function TradeModal({ G, me, playerID, moves, onClose }: { G: GState; me:
 
       <div className="row" style={{ marginTop: 18, justifyContent: 'space-between' }}>
         <span style={{ fontSize: 20 }}>
-          {goodsEmoji(give) || '…'} ➜ {goodsEmoji(get) || '…'}
+          {goodsEmoji(allGive) || '…'} ➜ {goodsEmoji(get) || '…'}
         </span>
         <button
           className="primary"
-          disabled={!to || handTotal(give) === 0 || handTotal(get) === 0}
+          disabled={!to || handTotal(allGive) === 0 || handTotal(get) === 0}
           onClick={() => {
-            moves.proposeTrade(to, clean(give), clean(get));
+            moves.proposeTrade(to, clean(allGive), clean(get), clean(stash));
             setGive({});
+            setStash({});
             setGet({});
           }}
         >
@@ -172,7 +200,8 @@ export function BlackMarketModal({ G, me, moves, onClose }: { G: GState; me: Pla
   return (
     <Modal icon="🕶️" title="Black market" onClose={onClose}>
       <p className="small muted">
-        Syndicate only. <b>Smuggle</b> a card without trading for it in public. <b>Pump</b> a price so you can sell high tomorrow. The news
+        Syndicate only. <b>Smuggle</b> a card into your hidden stash: it isn't in your public card count, works for night actions and
+        trades, but can't be sold. <b>Pump</b> a price so you can sell high tomorrow. The news
         shows the price jump, but not who caused it. Spies <i>can</i> see the gold you spend here, unless you hire security.
       </p>
       <div className="row" style={{ margin: '6px 0 10px' }}>
@@ -323,6 +352,9 @@ export function IdentityModal({ G, me, onClose }: { G: GState; me: PlayerSecret;
           kidnapper is exposed.
         </p>
       )}
+      {me.faction === 'syndicate' && RESOURCES.some((r) => me.contraband[r] > 0) && (
+        <p className="small">🕶️ Your contraband stash: {goodsEmoji(me.contraband)} (hidden from your card count; customs can find it)</p>
+      )}
       {me.hostages.length > 0 && (
         <p className="small">
           🗡️ You hold citizens of:{' '}
@@ -464,7 +496,7 @@ export function Welcome({ G, me, onClose }: { G: GState; me: PlayerSecret; onClo
             <div><span className="hi">🌙</span><b>Night</b><span>Click a city to send envoys, open supply lines or spy; click your own to build factories. Each needs specific cards.</span></div>
             <div><span className="hi">🔁</span><b>Cover your tracks</b><span>Trade by day for the cards your night plans need. Every trade and sale is public.</span></div>
             <div><span className="hi">🟡</span><b>Free Trader</b><span>A secret title for whoever builds {FREE_TRADER_ROUTES} supply lines. It can veto the Tribunal.</span></div>
-            <div><span className="hi">🕵️</span><b>Spies</b><span>report how much gold a city received and spent. Do the maths against the public sales.</span></div>
+            <div><span className="hi">🕵️</span><b>Spies</b><span>Two operations a night: audit a city's gold, inspect it for smuggled goods, or find out who's spying on you.</span></div>
             <div><span className="hi">📰</span><b>Morning news</b><span>shows what each city did, but never who did it.</span></div>
           </div>
           <p className="small muted" style={{ textAlign: 'center' }}>

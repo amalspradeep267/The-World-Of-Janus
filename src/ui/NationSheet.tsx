@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  COST,
+  SPY,
   FACTORY,
   FACTION_INFO,
   KIDNAP,
@@ -11,7 +11,7 @@ import {
   type NationId,
   type Resource,
 } from '../game/constants';
-import { canBuildFactory, cityDistance, distanceGold, factoryCost, findRoute, hasGoods, routeCount } from '../game/game';
+import { canBuildFactory, cityDistance, distanceGold, factoryCost, findRoute, hasGoods, routeCount, spendable, spyOpsUsed } from '../game/game';
 import type { GState, PlayerSecret } from '../game/types';
 import { Avatar, playerOf, Recipe, ResPill, missingFor } from './common';
 
@@ -42,14 +42,18 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
   const plannedEnvoys = me.plans.filter((p) => p.kind === 'envoy').length;
   const atRouteCap = routeCount(G, me.nation) + plannedEnvoys >= MAX_ROUTES_PER_CITY;
   const canSmuggle = me.faction === 'syndicate';
+  // Night recipes can be paid from the hand and (Syndicate) the contraband stash.
+  const cards = spendable(me);
   const kidnapPlanned = me.plans.find((p) => p.kind === 'kidnap');
+  const opsLeft = SPY.perNight - spyOpsUsed(me);
+  const counterPlanned = me.plans.some((p) => p.kind === 'counter');
   // Syndicate members know each other's cities; they can't kidnap their own.
   const teammates = Object.values(me.known).filter((who): who is string => who !== 'bot' && who !== playerID);
   const hexes = cityDistance(G, me.nation, nation);
   const travel = distanceGold(G, me.nation, nation);
   const shortOfGold = me.gold < travel;
-  const envoyMissing = missingFor(me.hand, RECIPE.envoy);
-  const routeMissing = missingFor(me.hand, RECIPE.route);
+  const envoyMissing = missingFor(cards, RECIPE.envoy);
+  const routeMissing = missingFor(cards, RECIPE.route);
   const plannedGoods = me.plans.filter((p) => p.kind === 'route' && p.with === nation).length;
   const goodsFull = route ? route.goods.length + plannedGoods >= MAX_GOODS_PER_ROUTE : false;
   const tradeable = route
@@ -68,14 +72,14 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
           ? `It's far away: you need ${travel} gold for the journey.`
           : null;
   const factoryTiles = mine ? n.tiles.filter((t) => canBuildFactory(G, me, t)) : [];
-  const affordableTiles = factoryTiles.filter((t) => hasGoods(me.hand, factoryCost(G, t)));
-  const factoryMissing = missingFor(me.hand, RECIPE.factory);
+  const affordableTiles = factoryTiles.filter((t) => hasGoods(cards, factoryCost(G, t)));
+  const factoryMissing = missingFor(cards, RECIPE.factory);
   const factoryBlock =
     factoryTiles.length === 0
       ? FACTORY.tiles
         ? `Factories only go on ${FACTORY.tiles.map((r) => RESOURCE_INFO[r].emoji).join(' ')} tiles, one each, and you have no free one.`
         : 'Every one of your tiles already has a factory.'
-      : affordableTiles.length === 0 && !factoryMissing.length
+      : affordableTiles.length === 0 && !factoryMissing.length && FACTORY.tileCost > 0
         ? `You need ${FACTORY.tileCost} of a tile's own resource as well. Save up, or trade for more.`
         : factoryMissing.length
         ? `Missing ${factoryMissing.map((r) => RESOURCE_INFO[r].emoji).join(' ')}: trade for it by day${canSmuggle ? ' or 🕶️ smuggle it' : ''}.`
@@ -136,7 +140,7 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
       {n.factories.length > 0 && (
         <p className="small">
           🏭 Factories: {n.factories.map((f) => RESOURCE_INFO[f.good].emoji).join(' ')}{' '}
-          <span className="muted">(+{FACTORY.yield} each every dawn)</span>
+          <span className="muted">(+{FACTORY.yield} each time their tile is rolled)</span>
         </p>
       )}
 
@@ -155,12 +159,31 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
                   <b>Build a factory</b>
                   <span>
                     {factoryBlock ??
-                      `Pick one of your tiles: it makes ${FACTORY.yield} more of its resource every dawn. Costs ${FACTORY.tileCost} of that resource plus ⛏️ + 🔥. Everyone will see it on the map.`}
+                      `Pick one of your tiles: each time its number is rolled it makes ${FACTORY.yield} more. Everyone will see it on the map.`}
                   </span>
                 </span>
                 <span className="cost">
-                  {FACTORY.tileCost}× tile + <Recipe recipe={RECIPE.factory} hand={me.hand} />
+                  {FACTORY.tileCost > 0 && <>{FACTORY.tileCost}× tile + </>}
+                  <Recipe recipe={RECIPE.factory} hand={cards} />
                 </span>
+              </button>
+              <button
+                className="action"
+                disabled={counterPlanned || opsLeft === 0 || me.gold < SPY.counter}
+                onClick={() => moves.planCounter()}
+              >
+                <span className="ai">🔎</span>
+                <span>
+                  <b>{counterPlanned ? 'Counter-intelligence ordered ✓' : 'Counter-intelligence'}</b>
+                  <span>
+                    {!counterPlanned && opsLeft === 0
+                      ? `You've used your ${SPY.perNight} spy operations tonight.`
+                      : !counterPlanned && me.gold < SPY.counter
+                        ? `Needs ${SPY.counter} gold.`
+                        : 'Find out which cities send spies to your city tonight.'}
+                  </span>
+                </span>
+                <span className="cost">🪙{SPY.counter}</span>
               </button>
               {mode === 'factory' && (
                 <div className="stack" style={{ marginTop: 8 }}>
@@ -171,14 +194,14 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
                       <button
                         key={t}
                         className="row"
-                        disabled={!hasGoods(me.hand, cost)}
-                        title={hasGoods(me.hand, cost) ? undefined : `You have ${me.hand[r]} ${RESOURCE_INFO[r].label}`}
+                        disabled={!hasGoods(cards, cost)}
+                        title={hasGoods(cards, cost) ? undefined : `You have ${cards[r]} ${RESOURCE_INFO[r].label}`}
                         onClick={() => {
                           moves.planFactory(t);
                           setMode(null);
                         }}
                       >
-                        {RESOURCE_INFO[r].emoji} {RESOURCE_INFO[r].label} tile ({G.tiles[t].number}) · <Recipe recipe={cost} hand={me.hand} />
+                        {RESOURCE_INFO[r].emoji} {RESOURCE_INFO[r].label} tile ({G.tiles[t].number}) · <Recipe recipe={cost} hand={cards} />
                       </button>
                     );
                   })}
@@ -200,7 +223,7 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
               </span>
               {!plannedEnvoy && (
                 <span className="cost">
-                  <Recipe recipe={RECIPE.envoy} hand={me.hand} />
+                  <Recipe recipe={RECIPE.envoy} hand={cards} />
                   {travel > 0 && <span className={shortOfGold ? 'lacking' : ''}>🪙{travel}</span>}
                 </span>
               )}
@@ -215,7 +238,7 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
                 <span>{routeBlock ?? 'Pick a good. Whenever one of you produces it, the other gets 1 too.'}</span>
               </span>
               <span className="cost">
-                <Recipe recipe={RECIPE.route} hand={me.hand} />
+                <Recipe recipe={RECIPE.route} hand={cards} />
                 {travel > 0 && <span className={shortOfGold ? 'lacking' : ''}>🪙{travel}</span>}
               </span>
             </button>
@@ -236,22 +259,38 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
             </div>
           )}
 
-          <button
-            className="action"
-            disabled={me.gold < COST.spyGold || me.plans.some((p) => p.kind === 'spy' && p.nation === nation)}
-            onClick={() => moves.planSpy(nation)}
-          >
-            <span className="ai">🕵️</span>
-            <span>
-              <b>{me.plans.some((p) => p.kind === 'spy' && p.nation === nation) ? 'Spies sent ✓' : 'Spy on its treasury'}</b>
-              <span>
-                {me.gold < COST.spyGold
-                  ? `Needs ${COST.spyGold} gold. Sell cards at the 💰 market by day.`
-                  : 'Learn how much gold this city received and spent this round. Compare it with the public sales.'}
-              </span>
-            </span>
-            <span className="cost">🪙{COST.spyGold}</span>
-          </button>
+          <p className="small muted" style={{ margin: '12px 0 0' }}>
+            🕵️ Spy operations tonight: {SPY.perNight - opsLeft} of {SPY.perNight} used
+          </p>
+          {(['treasury', 'customs'] as const).map((op) => {
+            const ordered = me.plans.some((p) => p.kind === 'spy' && p.nation === nation && p.op === op);
+            const cost = SPY[op];
+            const reason = ordered
+              ? null
+              : opsLeft === 0
+                ? `You've used your ${SPY.perNight} spy operations tonight.`
+                : me.gold < cost
+                  ? `Needs ${cost} gold. Sell cards at the 💰 market by day.`
+                  : null;
+            return (
+              <button key={op} className="action" disabled={ordered || !!reason} onClick={() => moves.planSpy(nation, op)}>
+                <span className="ai">{op === 'treasury' ? '💰' : '📦'}</span>
+                <span>
+                  <b>
+                    {op === 'treasury' ? 'Treasury audit' : 'Customs inspection'}
+                    {ordered ? ' ✓' : ''}
+                  </b>
+                  <span>
+                    {reason ??
+                      (op === 'treasury'
+                        ? 'How much gold this city received and spent this round. Compare it with the public sales.'
+                        : 'Whether this city is holding smuggled goods.')}
+                  </span>
+                </span>
+                <span className="cost">🪙{cost}</span>
+              </button>
+            );
+          })}
 
           {me.faction === 'syndicate' && (
             <>

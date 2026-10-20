@@ -76,10 +76,11 @@ export const TILES_PER_NATION = 3;
  * and no city is stuck with bad numbers. Each matching tile yields DICE_YIELD of its resource.
  */
 export const DIE_SIDES = 12;
-export const HARVEST_ROLLS = 1;
-export const DICE_YIELD = 2;
-/** Every nation gets this much of each of its own resources every day, dice or not. */
-export const BASE_INCOME = 1;
+/** Three d12 each dawn; only tiles whose number comes up produce, DICE_YIELD per hit. */
+export const HARVEST_ROLLS = 3;
+export const DICE_YIELD = 1;
+/** Extra of each own resource every dawn, dice or not. 0: only rolled tiles produce. */
+export const BASE_INCOME = 0;
 
 export const START_EACH = 2;
 // Prices and gold are whole numbers on a 10-per-card scale, so sales pay exactly the listed price.
@@ -99,15 +100,19 @@ export const RECIPE: Record<'envoy' | 'route' | 'factory', Partial<Record<Resour
 
 /**
  * 🏭 Factories (night, your own city): built on one of your tiles, a factory adds `yield` of that
- * tile's resource every dawn, dice or not, from the dawn after it's built. One per tile.
- * Cost: RECIPE.factory (Ore + Coal) plus `tileCost` of the tile's own resource. Tuned so that a
- * city saving up alone builds on about night 3, and one that trades for the missing cards on night 1-2.
+ * tile's resource each time that tile's number is rolled, from the dawn after it's built. One per tile.
+ * Cost: RECIPE.factory (Ore + Coal) plus `tileCost` of the tile's own resource.
+ * Simulated payback: a tile is rolled ~1 dawn in 4, so +1 per hit returns ~1.25 cards if built on
+ * night 1 of 6. Anything costing more than ~2 cards never pays back, hence tileCost 0 for now.
  * `tiles` limits which tile types can host one: null = any, or e.g. ['coal', 'ore', 'silk'].
- * (Alternative to try later: +1 only when the die hits that tile, with a cheaper cost.)
  */
-export const FACTORY: { yield: number; tileCost: number; tiles: Resource[] | null } = { yield: 1, tileCost: 5, tiles: null };
-/** Spies report one city's treasury for the round: total gold received, and total gold spent. */
-export const COST = { spyGold: 12 };
+export const FACTORY: { yield: number; tileCost: number; tiles: Resource[] | null } = { yield: 1, tileCost: 0, tiles: null };
+/**
+ * 🕵️ Spy operations, up to `perNight` a night:
+ * treasury audit (a city's gold received and spent), customs inspection (does a city hold
+ * contraband?), counter-intelligence (which cities spied on your own city tonight).
+ */
+export const SPY = { treasury: 12, customs: 10, counter: 8, perNight: 2 };
 
 /**
  * 🛡️ Hired security (Syndicate only, day or night): bribes any spies sent to your city tonight,
@@ -115,7 +120,11 @@ export const COST = { spyGold: 12 };
  */
 export const SECURITY = { gold: 8 };
 
-/** Black market (night, Syndicate only): buy a card at the market price times this markup, rounded up. */
+/**
+ * Black market (night, Syndicate only): buy a card at the market price times this markup, rounded up.
+ * Smuggled cards go into a hidden contraband stash: not in the public card count, usable for night
+ * recipes, and offerable in public trades (where they arrive as normal cards), but never sold at market.
+ */
 export const SMUGGLE_MARKUP = 1.5;
 /** Black market (night, Syndicate only): pay this much gold to fake this many units of demand. */
 export const PUMP = { gold: 6, units: 4 };

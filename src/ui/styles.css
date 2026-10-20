@@ -198,6 +198,9 @@ select, input { font: inherit; color: var(--text); background: var(--panel-2); b
 .pick-meta { font-size: 11px; min-height: 22px; display: flex; align-items: center; }
 .gold-card { --c: #e3b04b; }
 .hand-empty { color: var(--muted); font-size: 13px; align-self: center; }
+.stash { display: flex; flex-direction: column; gap: 4px; align-self: center; padding: 6px 10px; border-radius: 12px; border: 1px dashed var(--night); background: #8fa2ff14; }
+.stash-label { font-size: 11px; font-weight: 700; color: var(--night); letter-spacing: 0.06em; }
+.stash .hand { gap: 6px; padding-top: 4px; }
 .orders { margin-left: auto; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; align-self: center; }
 .order { display: flex; align-items: center; gap: 8px; background: #2a2f48; border: 1px solid var(--night); border-radius: 999px; padding: 4px 6px 4px 12px; font-size: 13px; }
 

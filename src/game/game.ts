@@ -3,7 +3,6 @@ import { ActivePlayers, INVALID_MOVE } from 'boardgame.io/core';
 import {
   BASE_INCOME,
   BOT,
-  COST,
   DISTANCE,
   FACTORY,
   DICE_YIELD,
@@ -22,6 +21,7 @@ import {
   PUMP,
   RECIPE,
   SECURITY,
+  SPY,
   RESOURCES,
   RESOURCE_INFO,
   SETUP_TABLE,
@@ -40,7 +40,7 @@ import {
   type Resource,
 } from './constants';
 import { generateMap, hexDistance, type Rng } from './map';
-import type { GameResult, GState, Hand, NewsItem, PlayerID, PlayerSecret, Route, Settings } from './types';
+import type { GameResult, GState, Hand, NewsItem, PlayerID, PlayerSecret, Route, Settings, SpyOp } from './types';
 
 export const GAME_NAME = 'the-world-of-janus';
 
@@ -88,7 +88,7 @@ function isValidGoods(paid: Partial<Hand>): boolean {
 
 export const hasGoods = (hand: Hand, goods: Partial<Hand>) => RESOURCES.every((r) => hand[r] >= (goods[r] ?? 0));
 
-/** Public card counts are refreshed at dawn and after public trades/sales, never mid-night. */
+/** Public card counts (hand only) are refreshed only at dawn, so no single deal can be traced. */
 function snapshotHands(G: GState) {
   for (const pid of Object.keys(G.players)) G.handSizes[pid] = handTotal(G.players[pid].hand);
 }
@@ -100,8 +100,30 @@ function moveGoods(from: Hand, to: Hand | null, goods: Partial<Hand>) {
   }
 }
 
-function refund(p: PlayerSecret, paid: Partial<Hand>) {
-  for (const r of RESOURCES) p.hand[r] += paid[r] ?? 0;
+/** Give back a night order's cards, to the hand and the contraband stash they came from. */
+function refund(p: PlayerSecret, paid: Partial<Hand>, fromStash: Partial<Hand> = {}) {
+  for (const r of RESOURCES) {
+    p.contraband[r] += fromStash[r] ?? 0;
+    p.hand[r] += (paid[r] ?? 0) - (fromStash[r] ?? 0);
+  }
+}
+
+/** Cards a player can spend on night recipes: their hand plus any contraband. */
+export const spendable = (p: PlayerSecret): Hand =>
+  Object.fromEntries(RESOURCES.map((r) => [r, p.hand[r] + p.contraband[r]])) as Hand;
+
+/** Pay a recipe, using contraband first (it doesn't show in the public card count). */
+function payRecipe(p: PlayerSecret, cost: Partial<Hand>): Partial<Hand> {
+  const fromStash: Partial<Hand> = {};
+  for (const r of RESOURCES) {
+    const need = cost[r] ?? 0;
+    if (!need) continue;
+    const s = Math.min(need, p.contraband[r]);
+    if (s) fromStash[r] = s;
+    p.contraband[r] -= s;
+    p.hand[r] -= need - s;
+  }
+  return fromStash;
 }
 
 function addDemand(G: GState, r: Resource, n: number) {
@@ -156,7 +178,9 @@ function startDay({ G, random }: { G: GState; random: Rng & { Die(sides: number)
       const hits = G.rolls.filter((roll) => roll === tile.number).length;
       g[tile.resource!] += hits * DICE_YIELD;
     }
-    for (const f of G.nations[n]!.factories) g[f.good] += FACTORY.yield;
+    for (const f of G.nations[n]!.factories) {
+      g[f.good] += G.rolls.filter((roll) => roll === G.tiles[f.tile].number).length * FACTORY.yield;
+    }
     gains[n] = g;
     for (const r of RESOURCES) if (g[r]) addSupply(G, r, g[r]);
   }
@@ -213,6 +237,7 @@ function release(G: GState, kidnapper: PlayerID) {
 function endDay({ G }: { G: GState }) {
   for (const t of G.trades) if (t.status === 'open') t.status = 'expired';
   G.trades = [];
+  for (const pid of humans(G)) G.players[pid].stashOffers = {};
 
   if (G.round >= TRIBUNAL_FROM_ROUND) resolveTribunal(G);
   for (const pid of humans(G)) G.players[pid].veto = 0;
@@ -302,7 +327,8 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
       else G.ledgers[pid].spent += plan.gold;
     }
   }
-  const spyOrders: { pid: PlayerID; nation: NationId }[] = [];
+  const spyOrders: { pid: PlayerID; op: SpyOp; nation: NationId }[] = [];
+  const counterOrders: PlayerID[] = [];
   const kidnapOrders: { pid: PlayerID; nation: NationId; suspect: PlayerID; gold: number }[] = [];
 
   // Player actions, in shuffled order so the news order leaks nothing.
@@ -311,7 +337,7 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
     for (const plan of p.plans) {
       if (plan.kind === 'envoy') {
         if (findRoute(G, p.nation, plan.to) || pendingBetween(G, p.nation, plan.to) || routeCount(G, p.nation) >= MAX_ROUTES_PER_CITY) {
-          refund(p, plan.paid);
+          refund(p, plan.paid, plan.fromStash);
           unspend(G, pid, plan.gold);
           p.inbox.push({ round: G.round, text: `Your envoy to ${icon(G, plan.to)} was recalled (already in contact). Refunded.` });
           continue;
@@ -321,24 +347,24 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
       } else if (plan.kind === 'route') {
         const rt = findRoute(G, p.nation, plan.with);
         if (!rt || rt.goods.includes(plan.good) || rt.goods.length >= MAX_GOODS_PER_ROUTE) {
-          refund(p, plan.paid);
+          refund(p, plan.paid, plan.fromStash);
           unspend(G, pid, plan.gold);
-          p.inbox.push({ round: G.round, text: `Trade with ${icon(G, plan.with)} could not open. Refunded.` });
+          p.inbox.push({ round: G.round, text: `The supply line with ${icon(G, plan.with)} could not open. Refunded.` });
           continue;
         }
         rt.goods.push(plan.good);
         items.push({ t: 'route', a: rt.a, b: rt.b, good: plan.good });
       } else if (plan.kind === 'smuggle') {
-        p.hand[plan.good] += 1;
+        p.contraband[plan.good] += 1;
         addDemand(G, plan.good, 1);
-        p.inbox.push({ round: G.round, text: `🕶️ Smugglers delivered 1 ${RESOURCE_INFO[plan.good].emoji} ${RESOURCE_INFO[plan.good].label}.` });
+        p.inbox.push({ round: G.round, text: `🕶️ Smugglers delivered 1 ${RESOURCE_INFO[plan.good].emoji} ${RESOURCE_INFO[plan.good].label} to your hidden stash.` });
       } else if (plan.kind === 'pump') {
         addDemand(G, plan.good, PUMP.units);
         p.inbox.push({ round: G.round, text: `🕶️ Your agents bid up ${RESOURCE_INFO[plan.good].emoji} ${RESOURCE_INFO[plan.good].label}.` });
       } else if (plan.kind === 'factory') {
         const n = G.nations[p.nation]!;
         if (n.factories.some((f) => f.tile === plan.tile)) {
-          refund(p, plan.paid);
+          refund(p, plan.paid, plan.fromStash);
           p.inbox.push({ round: G.round, text: 'That tile already has a factory. Refunded.' });
           continue;
         }
@@ -346,12 +372,14 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
         items.push({ t: 'factory', nation: p.nation, good: plan.good });
         p.inbox.push({
           round: G.round,
-          text: `🏭 Your factory is built on your ${RESOURCE_INFO[plan.good].label} tile. It adds ${FACTORY.yield} ${RESOURCE_INFO[plan.good].emoji} every dawn.`,
+          text: `🏭 Your factory is built on your ${RESOURCE_INFO[plan.good].label} tile. It adds ${FACTORY.yield} ${RESOURCE_INFO[plan.good].emoji} each time that tile is rolled.`,
         });
       } else if (plan.kind === 'kidnap') {
         kidnapOrders.push({ pid, nation: plan.nation, suspect: plan.suspect, gold: plan.gold });
+      } else if (plan.kind === 'counter') {
+        counterOrders.push(pid);
       } else {
-        spyOrders.push({ pid, nation: plan.nation });
+        spyOrders.push({ pid, op: plan.op, nation: plan.nation });
         items.push({ t: 'spy', nation: plan.nation });
       }
       if ('paid' in plan) for (const r of RESOURCES) if (plan.paid[r]) addDemand(G, r, plan.paid[r]!);
@@ -395,19 +423,41 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
     }
   }
 
-  for (const { pid, nation } of spyOrders) {
+  for (const { pid, op, nation } of spyOrders) {
     const owner = G.owners[nation]!;
-    const l = owner === 'bot' ? freshLedger() : G.ledgers[owner];
-    // Bribed spies (the target hired security) leave the illegal gold out of their report.
+    // Bribed spies (the target hired security) see nothing illegal, and their report reads like a clean one.
     const bribed = owner !== 'bot' && G.players[owner].security > 0;
-    const received = l.received + (bribed ? 0 : l.illegalIn);
-    const spent = l.spent + (bribed ? 0 : l.illegalOut);
+    if (op === 'treasury') {
+      const l = owner === 'bot' ? freshLedger() : G.ledgers[owner];
+      const received = l.received + (bribed ? 0 : l.illegalIn);
+      const spent = l.spent + (bribed ? 0 : l.illegalOut);
+      G.players[pid].inbox.push({
+        round: G.round,
+        text:
+          received === 0 && spent === 0
+            ? `💰 Treasury audit of ${icon(G, nation)}: its treasury didn't move this round.`
+            : `💰 Treasury audit of ${icon(G, nation)}: this round it received ${received} gold and spent ${spent} gold.`,
+      });
+    } else {
+      const stash = owner === 'bot' || bribed ? emptyHand() : G.players[owner].contraband;
+      const found = handTotal(stash);
+      G.players[pid].inbox.push({
+        round: G.round,
+        text: found
+          ? `📦 Customs inspection of ${icon(G, nation)}: found ${found} smuggled card${found === 1 ? '' : 's'} (${formatGoods(stash)}).`
+          : `📦 Customs inspection of ${icon(G, nation)}: nothing suspicious was found.`,
+      });
+    }
+  }
+  // Counter-intelligence: which cities sent spies to your own city tonight.
+  for (const pid of counterOrders) {
+    const home = G.players[pid].nation;
+    const from = [...new Set(spyOrders.filter((o) => o.nation === home && o.pid !== pid).map((o) => G.players[o.pid].nation))];
     G.players[pid].inbox.push({
       round: G.round,
-      text:
-        received === 0 && spent === 0
-          ? `🕵️ Spies in ${icon(G, nation)}: its treasury didn't move this round.`
-          : `🕵️ Spies in ${icon(G, nation)}: this round it received ${received} gold and spent ${spent} gold.`,
+      text: from.length
+        ? `🔎 Counter-intelligence: spies from ${from.map((n) => icon(G, n)).join(', ')} came to your city tonight.`
+        : '🔎 Counter-intelligence: no spies came to your city tonight.',
     });
   }
   for (const pid of humans(G)) G.players[pid].security = 0;
@@ -539,12 +589,23 @@ const respondEnvoy = hostOnly(({ G, playerID }, id: number, accept: boolean) => 
   });
 });
 
-const proposeTrade = hostOnly(({ G, playerID }, to: PlayerID, give: Partial<Hand>, get: Partial<Hand>) => {
+/**
+ * Offer a trade. `fromStash` (Syndicate only) is the part of `give` taken from the contraband stash;
+ * it's kept secret and the cards arrive as normal goods on the other side.
+ */
+const proposeTrade = hostOnly(({ G, playerID }, to: PlayerID, give: Partial<Hand>, get: Partial<Hand>, fromStash: Partial<Hand> = {}) => {
   const p = me(G, playerID);
   if (!p || to === playerID || !G.players[to]) return INVALID_MOVE;
-  if (!isValidGoods(give) || !isValidGoods(get) || !hasGoods(p.hand, give)) return INVALID_MOVE;
+  if (!isValidGoods(give) || !isValidGoods(get)) return INVALID_MOVE;
+  for (const r of RESOURCES) {
+    const s = fromStash?.[r] ?? 0;
+    if (!Number.isInteger(s) || s < 0 || s > (give[r] ?? 0) || s > p.contraband[r]) return INVALID_MOVE;
+    if ((give[r] ?? 0) - s > p.hand[r]) return INVALID_MOVE;
+  }
   if (G.trades.filter((t) => t.from === playerID && t.status === 'open').length >= 3) return INVALID_MOVE;
-  G.trades.push({ id: G.nextId++, from: playerID!, to, give, get, status: 'open' });
+  const id = G.nextId++;
+  G.trades.push({ id, from: playerID!, to, give, get, status: 'open' });
+  if (handTotal(fromStash ?? {}) > 0) p.stashOffers[id] = { ...fromStash };
 });
 
 const respondTrade = hostOnly(({ G, playerID }, id: number, accept: boolean) => {
@@ -556,17 +617,21 @@ const respondTrade = hostOnly(({ G, playerID }, id: number, accept: boolean) => 
   }
   const from = G.players[t.from];
   const to = G.players[t.to];
-  if (!hasGoods(from.hand, t.give) || !hasGoods(to.hand, t.get)) return INVALID_MOVE;
+  const stash = from.stashOffers[t.id] ?? {};
+  const fromHand = Object.fromEntries(RESOURCES.map((r) => [r, (t.give[r] ?? 0) - (stash[r] ?? 0)])) as Partial<Hand>;
+  if (!hasGoods(from.hand, fromHand) || !hasGoods(from.contraband, stash) || !hasGoods(to.hand, t.get)) return INVALID_MOVE;
   const fee = (pid: PlayerID) => (G.tariffed[pid] ? TARIFF.tradeGold : 0);
   if (from.gold < fee(t.from) || to.gold < fee(t.to)) return INVALID_MOVE;
   for (const pid of [t.from, t.to]) {
     G.players[pid].gold -= fee(pid);
     G.ledgers[pid].spent += fee(pid);
   }
-  moveGoods(from.hand, to.hand, t.give);
+  // Contraband leaves the stash and arrives as ordinary goods.
+  moveGoods(from.hand, to.hand, fromHand);
+  moveGoods(from.contraband, to.hand, stash);
   moveGoods(to.hand, from.hand, t.get);
+  delete from.stashOffers[t.id];
   t.status = 'accepted';
-  snapshotHands(G);
   const tariffNote = fee(t.from) + fee(t.to) > 0 ? ' (tariff paid)' : '';
   G.publicLog.push({
     round: G.round,
@@ -578,6 +643,7 @@ const cancelTrade = hostOnly(({ G, playerID }, id: number) => {
   const t = G.trades.find((x) => x.id === id);
   if (!t || t.status !== 'open' || t.from !== playerID) return INVALID_MOVE;
   t.status = 'cancelled';
+  delete G.players[playerID!].stashOffers[t.id];
 });
 
 const sell = hostOnly(({ G, playerID }, resource: Resource, qty: number) => {
@@ -590,7 +656,6 @@ const sell = hostOnly(({ G, playerID }, resource: Resource, qty: number) => {
   p.gold += earned;
   G.ledgers[playerID!].received += earned;
   addSupply(G, resource, qty);
-  snapshotHands(G);
   G.publicLog.push({
     round: G.round,
     text: `💰 ${nameOf(G, playerID!)} sold ${qty} ${RESOURCE_INFO[resource].emoji} ${RESOURCE_INFO[resource].label} for ${earned} gold${G.tariffed[playerID!] ? ' (after tariff)' : ''}.`,
@@ -634,10 +699,10 @@ const planEnvoy = hostOnly(({ G, playerID }, to: NationId) => {
   if (routeCount(G, p.nation) + planned >= MAX_ROUTES_PER_CITY) return INVALID_MOVE;
   const paid = { ...RECIPE.envoy };
   const gold = distanceGold(G, p.nation, to);
-  if (!hasGoods(p.hand, paid) || p.gold < gold) return INVALID_MOVE;
-  moveGoods(p.hand, null, paid);
+  if (!hasGoods(spendable(p), paid) || p.gold < gold) return INVALID_MOVE;
+  const fromStash = payRecipe(p, paid);
   p.gold -= gold;
-  p.plans.push({ kind: 'envoy', to, paid, gold });
+  p.plans.push({ kind: 'envoy', to, paid, fromStash, gold });
 });
 
 const planRoute = hostOnly(({ G, playerID }, partner: NationId, good: Resource) => {
@@ -651,19 +716,31 @@ const planRoute = hostOnly(({ G, playerID }, partner: NationId, good: Resource) 
   if (rt.goods.length + planned >= MAX_GOODS_PER_ROUTE) return INVALID_MOVE;
   const paid = { ...RECIPE.route };
   const gold = distanceGold(G, p.nation, partner);
-  if (!hasGoods(p.hand, paid) || p.gold < gold) return INVALID_MOVE;
-  moveGoods(p.hand, null, paid);
+  if (!hasGoods(spendable(p), paid) || p.gold < gold) return INVALID_MOVE;
+  const fromStash = payRecipe(p, paid);
   p.gold -= gold;
-  p.plans.push({ kind: 'route', with: partner, good, paid, gold });
+  p.plans.push({ kind: 'route', with: partner, good, paid, fromStash, gold });
 });
 
-const planSpy = hostOnly(({ G, playerID }, nation: NationId) => {
+/** Spy operations used tonight (treasury audits, customs inspections and counter-intelligence). */
+export const spyOpsUsed = (p: PlayerSecret) => p.plans.filter((x) => x.kind === 'spy' || x.kind === 'counter').length;
+
+const planSpy = hostOnly(({ G, playerID }, nation: NationId, op: SpyOp = 'treasury') => {
   const p = me(G, playerID);
-  if (!p || !G.nations[nation] || nation === p.nation) return INVALID_MOVE;
-  if (p.plans.some((x) => x.kind === 'spy' && x.nation === nation)) return INVALID_MOVE;
-  if (p.gold < COST.spyGold) return INVALID_MOVE;
-  p.gold -= COST.spyGold;
-  p.plans.push({ kind: 'spy', nation, gold: COST.spyGold });
+  if (!p || !G.nations[nation] || nation === p.nation || (op !== 'treasury' && op !== 'customs')) return INVALID_MOVE;
+  if (p.plans.some((x) => x.kind === 'spy' && x.nation === nation && x.op === op)) return INVALID_MOVE;
+  if (spyOpsUsed(p) >= SPY.perNight || p.gold < SPY[op]) return INVALID_MOVE;
+  p.gold -= SPY[op];
+  p.plans.push({ kind: 'spy', op, nation, gold: SPY[op] });
+});
+
+/** Counter-intelligence on your own city: learn which cities spy on you tonight. */
+const planCounter = hostOnly(({ G, playerID }) => {
+  const p = me(G, playerID);
+  if (!p || p.plans.some((x) => x.kind === 'counter')) return INVALID_MOVE;
+  if (spyOpsUsed(p) >= SPY.perNight || p.gold < SPY.counter) return INVALID_MOVE;
+  p.gold -= SPY.counter;
+  p.plans.push({ kind: 'counter', gold: SPY.counter });
 });
 
 const isSyndicate = (p: PlayerSecret | undefined) => p?.faction === 'syndicate';
@@ -689,9 +766,9 @@ const planFactory = hostOnly(({ G, playerID }, tile: number) => {
   const p = me(G, playerID);
   if (!p || !Number.isInteger(tile) || !canBuildFactory(G, p, tile)) return INVALID_MOVE;
   const paid = factoryCost(G, tile);
-  if (!hasGoods(p.hand, paid)) return INVALID_MOVE;
-  moveGoods(p.hand, null, paid);
-  p.plans.push({ kind: 'factory', tile, good: G.tiles[tile].resource!, paid, gold: 0 });
+  if (!hasGoods(spendable(p), paid)) return INVALID_MOVE;
+  const fromStash = payRecipe(p, paid);
+  p.plans.push({ kind: 'factory', tile, good: G.tiles[tile].resource!, paid, fromStash, gold: 0 });
 });
 
 /** Syndicate only, day or night: hire (or dismiss) security that bribes tonight's spies. */
@@ -741,7 +818,7 @@ const cancelPlan = hostOnly(({ G, playerID }, index: number) => {
   const plan = p?.plans[index];
   if (!p || !plan) return INVALID_MOVE;
   p.gold += plan.gold;
-  if ('paid' in plan) refund(p, plan.paid);
+  if ('paid' in plan) refund(p, plan.paid, plan.fromStash);
   p.plans.splice(index, 1);
 });
 
@@ -796,6 +873,8 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
           captive: false,
           hostages: [],
           security: 0,
+          contraband: emptyHand(),
+          stashOffers: {},
         };
       });
 
@@ -876,7 +955,7 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
         onEnd: resolveNight as any,
         endIf: allReady,
         turn: { activePlayers: ActivePlayers.ALL },
-        moves: { setReady, respondEnvoy, planEnvoy, planRoute, planFactory, planSpy, planSmuggle, planPump, planKidnap, hireSecurity, cancelPlan },
+        moves: { setReady, respondEnvoy, planEnvoy, planRoute, planFactory, planSpy, planCounter, planSmuggle, planPump, planKidnap, hireSecurity, cancelPlan },
       },
     },
 

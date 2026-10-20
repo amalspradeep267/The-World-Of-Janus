@@ -42,13 +42,16 @@ export interface Envoy {
 }
 
 export type NightPlan =
-  | { kind: 'envoy'; to: NationId; paid: Partial<Hand>; gold: number }
-  | { kind: 'route'; with: NationId; good: Resource; paid: Partial<Hand>; gold: number }
-  | { kind: 'spy'; nation: NationId; gold: number }
+  | { kind: 'envoy'; to: NationId; paid: Partial<Hand>; fromStash: Partial<Hand>; gold: number }
+  | { kind: 'route'; with: NationId; good: Resource; paid: Partial<Hand>; fromStash: Partial<Hand>; gold: number }
+  | { kind: 'spy'; op: SpyOp; nation: NationId; gold: number }
+  | { kind: 'counter'; gold: number }
   | { kind: 'smuggle'; good: Resource; gold: number }
   | { kind: 'pump'; good: Resource; gold: number }
   | { kind: 'kidnap'; nation: NationId; suspect: PlayerID; gold: number }
-  | { kind: 'factory'; tile: number; good: Resource; paid: Partial<Hand>; gold: number };
+  | { kind: 'factory'; tile: number; good: Resource; paid: Partial<Hand>; fromStash: Partial<Hand>; gold: number };
+
+export type SpyOp = 'treasury' | 'customs';
 
 export interface PlayerSecret {
   nation: NationId;
@@ -71,6 +74,10 @@ export interface PlayerSecret {
   hostages: { victim: PlayerID; nation: NationId }[];
   /** Syndicate: gold paid for security tonight (0 = none). Secret. */
   security: number;
+  /** Syndicate: smuggled cards, kept apart from the hand and out of the public card count. */
+  contraband: Hand;
+  /** Syndicate: which part of each open trade offer comes from the contraband stash. */
+  stashOffers: Record<number, Partial<Hand>>;
 }
 
 export interface Trade {
@@ -159,7 +166,7 @@ export interface GState {
   ready: Record<PlayerID, boolean>;
   /** Filled in by playerView: how many players are ready. At night it's all a client gets (see playerView). */
   readyCount?: number;
-  /** Public card count per player (not which cards), so hoarding can be spotted. */
+  /** Public card count per player (hand only, not contraband), refreshed only at dawn. */
   handSizes: Record<PlayerID, number>;
   /** faction is null when the host keeps exposed factions secret. */
   revealed: Record<PlayerID, { nation: NationId; faction: Faction | null }>;

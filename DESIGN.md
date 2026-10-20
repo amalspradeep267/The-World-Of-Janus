@@ -35,7 +35,7 @@ Anyone, Syndicate or Concord, whose city reaches **7 supply lines** (goods opene
 
 ## A round (6 rounds)
 
-1. **☀️ Harvest.** Every city gets +1 of each of its 3 resources. One **12-sided die** is rolled, so every number from 1 to 12 is equally likely, and each tile with that number yields 2 more. Each city's three tiles get three different numbers. Trade routes add a share of partners' harvests.
+1. **☀️ Harvest.** Three **12-sided dice** are rolled each dawn. **Only tiles showing a rolled number produce**: +1 per matching die (no free income). Each city's three tiles get three different numbers. About 0.75 cards per city per dawn. Supply lines add a share of partners' production.
 2. **☀️ Day (public, signed with your name).** Talk on Discord.
    - **🔁 Trade** cards with other players. Every completed trade is in the public record.
    - **💰 Sell** cards at the market for gold. Every sale is public, including how much it earned.
@@ -43,18 +43,18 @@ Anyone, Syndicate or Concord, whose city reaches **7 supply lines** (goods opene
 3. **🌙 Night (secret, by city).**
    - **✉️ Envoy** (🌾 Grain + 🐑 Wool, plus travel gold): ask another city for a connection. If they accept, they alone learn who sent it. Unanswered envoys expire after a day and a night.
    - **🤝 Open a supply line** (🪵 Timber + 🪨 Stone, plus travel gold): pick a good on an existing connection. From then on, whenever either city produces it, the other gets 1 too. *(Not to be confused with day-time trades, which are free one-off swaps between players.)*
-   - **🏭 Build a factory** (**5 of the tile's own resource** + ⛏️ Ore + 🔥 Coal, on one of your own tiles): that tile makes **+1 of its resource every dawn**, regardless of the dice, from the next morning. That's 2 per dawn instead of 1, plus the usual +2 when the die hits. One per tile, so at most 3 per city. Use the surplus to trade in bulk or sell. *Timing (simulated): saving alone you can afford the 5 by night 3 in most games, sooner with a lucky die; trading for them gets you there on night 1–2. Only about 1 city in 8 produces both Ore and Coal, so most must trade or smuggle for those. Alternative to try later: +1 only when the die hits that tile, at a lower cost.* Factories show on the map and in the news, and their output flows down supply lines too. (`FACTORY.tiles` in constants.ts can restrict factories to e.g. ⛏️ 🔥 🧵 tiles.)
-   - **🕵️ Spies** (12 gold): report one city's **total gold received and total gold spent** that round. No breakdown and no identities: players do the maths against the public sales.
-   - **🕶️ Black market (Syndicate only):** **Smuggle** one card for 1.5× its price, or **Pump** a resource's price for 6 gold.
+   - **🏭 Build a factory** (⛏️ Ore + 🔥 Coal, on one of your own tiles): **+1 extra each time that tile is rolled**. One per tile. *Simulated: a tile is rolled ~1 dawn in 4, so a night-1 factory returns ~1.25 cards over 6 rounds; anything costing more than ~2 cards never pays back. Options if factories feel weak: +2 per hit, or longer games.* Factories show on the map and in the news; output flows down supply lines. (`FACTORY.tiles` can restrict tile types.)
+   - **🕵️ Spy operations** (up to **2 a night**, any mix): 💰 **treasury audit** (12 gold: a city's total gold received and spent), 📦 **customs inspection** (10 gold: whether a city holds smuggled goods, and how many), 🔎 **counter-intelligence** (8 gold: which cities spy on your own city tonight).
+   - **🕶️ Black market (Syndicate only):** **Smuggle** one card for 1.5× its price into a **hidden contraband stash**, or **Pump** a resource's price for 6 gold. Stash cards don't count toward your public card count, pay for night recipes first, can be slipped into public trades (they arrive as ordinary goods, with a risk warning for the giver), and can't be sold at market.
    - **🗡️ Kidnap (Syndicate only, 15 gold, one per night):** see below.
-   - **🛡️ Hired security (Syndicate only, 8 gold, day or night):** bribes spies sent to your city that night. Their report leaves out illegal gold (ransoms, black market, kidnapping, security), while legal sales and spending still show.
+   - **🛡️ Hired security (Syndicate only, 8 gold, day or night):** bribes spies sent to your city that night. A treasury audit leaves out illegal gold; a customs inspection reads "nothing suspicious", exactly like a clean city's report.
 4. **📰 Morning news.** Every night action, listed by city in shuffled order, plus market moves. Everyone gets the newspaper.
 
 ### Limits and distance
 - Each city can have at most **4 connections**, and each connection at most **2 supply lines** (goods).
 - **Distance costs gold.** Envoys and supply lines cost 2 gold per hex between the two capitals beyond the first 2 hexes, up to about 8 gold across the map. Travel gold shows up in spy reports.
 - **At night, nobody sees who is ready**, only "4/5 ready": the last players still busy would otherwise point at the Syndicate. Clients don't even receive who is ready. By day, ready ticks are shown per player.
-- Everyone's **card count** (not which cards) is public. It updates at dawn and after public trades or sales, never mid-night.
+- Everyone's **card count** (hand only, not contraband) is public, and updates **only at dawn**, so a single deal can't be traced in the moment.
 
 ## Money and markets
 - **Prices start at 10 gold per card** and are always whole numbers. A sale pays exactly the listed price.
@@ -116,6 +116,8 @@ Without a reason to hide, the Concord could simply announce their cities to each
 - [x] **M1.10:** Kidnapping (Syndicate); clearer trade card picker
 - [x] **M1.11:** Spy reports show totals only; hired security for the Syndicate; kidnapping takes a citizen
 - [x] **M1.12:** "Trade routes" renamed **supply lines**; 🏭 factories on your own tiles (+1 per dawn, one per tile; cost 5 of the tile's resource + Ore + Coal)
+- [x] **M1.13 (feedback):** 3 d12, only rolled tiles produce; factories +1 per hit for Ore + Coal; contraband stash; dawn-only card counts; spy operations (2 a night)
+- [ ] **Resource balance:** simulated value tiers are Grain/Wool > Timber/Stone > Ore/Coal > Silk (no recipe uses Silk). Decide a role for Silk; War should lift Ore/Coal.
 - [ ] **M2: Arms and War.** Weapons need ⛏️ Ore + 🔥 Coal **and gold** (money pays for armies); forts need stone and timber; attacks are dice plus weapons vs forts plus secret ally support. Hoarding war materials is a tell. The Syndicate's active win becomes conquest.
 - [ ] **M3: Nobody sits out.** A conquered player becomes a *Government in Exile*: still wins with their faction, still votes, and can sabotage occupiers.
 - [ ] Phase timers, host reconnect and saved state.
