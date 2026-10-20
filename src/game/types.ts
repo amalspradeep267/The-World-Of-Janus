@@ -62,10 +62,12 @@ export interface PlayerSecret {
   freeTrader: boolean;
   /** Free Traders only: gold set aside for a veto today (0 = not armed). Secret. */
   veto: number;
-  /** Held for ransom by a (to them unknown) kidnapper. */
+  /** One of this player's citizens is held for ransom by a (to them unknown) kidnapper. */
   captive: boolean;
-  /** Syndicate: the players this one holds for ransom, and their cities. */
+  /** Syndicate: rulers paying this player ransom, and their cities. */
   hostages: { victim: PlayerID; nation: NationId }[];
+  /** Syndicate: gold paid for security tonight (0 = none). Secret. */
+  security: number;
 }
 
 export interface Trade {
@@ -82,13 +84,15 @@ export interface RosterEntry {
   name: string;
 }
 
-/** One player's gold movements this round. Secret; spies can read it. */
+/**
+ * One player's gold movements this round. Secret; spies read the totals.
+ * Illegal gold (ransoms, black market, kidnapping, security) is kept apart so hired security can hide it.
+ */
 export interface Ledger {
   received: number;
-  sales: number;
-  /** Gold from anywhere other than market sales (ransoms). */
-  other: number;
   spent: number;
+  illegalIn: number;
+  illegalOut: number;
 }
 
 /** Morning news is structured so the UI can draw it instead of printing sentences. */

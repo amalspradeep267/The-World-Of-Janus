@@ -43,9 +43,10 @@ Anyone, Syndicate or Concord, whose city reaches **7 trade routes** (goods opene
 3. **🌙 Night (secret, by city).**
    - **✉️ Envoy** (🌾 Grain + 🐑 Wool, plus travel gold): ask another city for a connection. If they accept, they alone learn who sent it. Unanswered envoys expire after a day and a night.
    - **🤝 Open trade** (🪵 Timber + 🪨 Stone, plus travel gold): pick a good on an existing connection. From then on, whenever either city harvests it, the other gets 1 too.
-   - **🕵️ Spies** (12 gold): read one city's treasury for the round, meaning gold received from sales (and how many sales) and gold spent. No identities are revealed.
+   - **🕵️ Spies** (12 gold): report one city's **total gold received and total gold spent** that round. No breakdown and no identities: players do the maths against the public sales.
    - **🕶️ Black market (Syndicate only):** **Smuggle** one card for 1.5× its price, or **Pump** a resource's price for 6 gold.
    - **🗡️ Kidnap (Syndicate only, 15 gold, one per night):** see below.
+   - **🛡️ Hired security (Syndicate only, 8 gold, day or night):** bribes spies sent to your city that night. Their report leaves out illegal gold (ransoms, black market, kidnapping, security), while legal sales and spending still show.
 4. **📰 Morning news.** Every night action, listed by city in shuffled order, plus market moves. Everyone gets the newspaper.
 
 ### Limits and distance
@@ -76,16 +77,16 @@ Exposing every Syndicate member wins the game for the Concord immediately. All T
 
 Without a reason to hide, the Concord could simply announce their cities to each other and corner the Syndicate. Kidnapping makes a known location dangerous.
 
-- **Order:** a Syndicate member picks a city and names the player they think rules it (15 gold).
-- **Right guess:** that player is held for ransom and pays the kidnapper **5 gold every dawn**, starting the morning after. They're told they're held, but not by whom. The news reports "Ruler kidnapped!" with the city only.
+- **Order:** a Syndicate member seizes a citizen of a city, naming the player they think rules it (15 gold).
+- **Right guess:** that city's ruler pays the kidnapper **5 gold every dawn** to keep the citizen safe, starting that same dawn. They're told, but not by whom. The news reports "Citizen kidnapped!" with the city only.
 - **Wrong guess**, including a bot city: the kidnapper is **exposed in the morning newspaper** with their name, city and faction, and is tariffed. That counts toward the Concord's win.
 - **Ends** when the kidnapper is exposed by any means. A player can only be held by one kidnapper, and the Syndicate can't kidnap its own members.
-- **Leaves a trail:** ransom income shows in spy reports as "gold from elsewhere", meaning money without matching public sales.
+- **Leaves a trail:** ransom is gold received without any public sale behind it. Spies see the total, and players can do the maths, unless the kidnapper hired security.
 
 ## How identity gets worked out
 1. **Recipes force public trading.** Most cities lack 🌾 + 🐑 or 🪵 + 🪨, so whoever traded for Grain and Wool today probably sent tonight's envoy.
 2. **Each city's 3 resources are public.** Whatever someone gives away in trades points to a few possible cities.
-3. **Spies plus public sales.** "Sydney received 34 gold from 2 sales" can be matched against who sold what by day.
+3. **Spies plus public sales.** "Sydney received 44 gold and spent 12" can be checked against who sold what by day; gold that doesn't add up points at illegal income.
 4. **Card counts** show who's hoarding.
 5. **Market moves** hint at what was spent or pumped. Only the Syndicate can pump.
 6. **Accepted envoys** tell the receiver who sent them. **The Tribunal** reveals someone to everyone.
@@ -111,6 +112,7 @@ Without a reason to hide, the Concord could simply announce their cities to each
 - [x] **M1.8:** Free Trader becomes a secret title (7 trade routes) that grants the veto; two factions only
 - [x] **M1.9:** One d12 for harvests (equal odds); clearer "You" marker
 - [x] **M1.10:** Kidnapping (Syndicate); clearer trade card picker
+- [x] **M1.11:** Spy reports show totals only; hired security for the Syndicate; kidnapping takes a citizen
 - [ ] **M2: Arms and War.** Weapons need ⛏️ Ore + 🔥 Coal **and gold** (money pays for armies); forts need stone and timber; attacks are dice plus weapons vs forts plus secret ally support. Hoarding war materials is a tell. The Syndicate's active win becomes conquest.
 - [ ] **M3: Nobody sits out.** A conquered player becomes a *Government in Exile*: still wins with their faction, still votes, and can sabotage occupiers.
 - [ ] Phase timers, host reconnect and saved state.

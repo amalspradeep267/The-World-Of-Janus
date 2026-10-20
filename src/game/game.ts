@@ -20,6 +20,7 @@ import {
   PRICE_STEP_PCT,
   PUMP,
   RECIPE,
+  SECURITY,
   RESOURCES,
   RESOURCE_INFO,
   SETUP_TABLE,
@@ -110,7 +111,10 @@ function addSupply(G: GState, r: Resource, n: number) {
   G.supply[r] = (G.supply[r] ?? 0) + n;
 }
 
-const freshLedger = () => ({ received: 0, sales: 0, other: 0, spent: 0 });
+const freshLedger = () => ({ received: 0, spent: 0, illegalIn: 0, illegalOut: 0 });
+
+/** Night orders paid from the illegal side of the ledger. */
+const ILLEGAL_KINDS = new Set(['smuggle', 'pump', 'kidnap']);
 
 /** What a sale of `qty` pays this player, after any Tribunal tariff. */
 export const saleValue = (G: GState, pid: PlayerID, r: Resource, qty: number) =>
@@ -188,8 +192,8 @@ function collectRansoms(G: GState) {
     victim.gold -= pay;
     G.ledgers[k.victim].spent += pay;
     kidnapper.gold += pay;
-    G.ledgers[k.kidnapper].other += pay;
-    victim.inbox.push({ round: G.round, text: `⛓️ You paid ${pay} gold in ransom to your unknown kidnapper.` });
+    G.ledgers[k.kidnapper].illegalIn += pay;
+    victim.inbox.push({ round: G.round, text: `⛓️ You paid ${pay} gold in ransom to keep your kidnapped citizen safe.` });
     kidnapper.inbox.push({ round: G.round, text: `🗡️ ${nameOf(G, k.victim)} paid you ${pay} gold in ransom.` });
   }
 }
@@ -198,7 +202,7 @@ function collectRansoms(G: GState) {
 function release(G: GState, kidnapper: PlayerID) {
   for (const k of G.kidnaps.filter((x) => x.kidnapper === kidnapper)) {
     G.players[k.victim].captive = false;
-    G.players[k.victim].inbox.push({ round: G.round, text: '🕊️ Your kidnapper has been exposed. You are free; no more ransom.' });
+    G.players[k.victim].inbox.push({ round: G.round, text: '🕊️ The kidnapper was exposed and your citizen is free. No more ransom.' });
   }
   G.kidnaps = G.kidnaps.filter((x) => x.kidnapper !== kidnapper);
   G.players[kidnapper].hostages = [];
@@ -291,7 +295,10 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
 
   // Gold spent tonight goes on each player's ledger (spies read it below).
   for (const pid of humans(G)) {
-    for (const plan of G.players[pid].plans) if ('gold' in plan) G.ledgers[pid].spent += plan.gold;
+    for (const plan of G.players[pid].plans) {
+      if (ILLEGAL_KINDS.has(plan.kind)) G.ledgers[pid].illegalOut += plan.gold;
+      else G.ledgers[pid].spent += plan.gold;
+    }
   }
   const spyOrders: { pid: PlayerID; nation: NationId }[] = [];
   const kidnapOrders: { pid: PlayerID; nation: NationId; suspect: PlayerID; gold: number }[] = [];
@@ -343,7 +350,8 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
     if (right) {
       const victim = G.players[order.suspect];
       if (victim.captive) {
-        unspend(G, order.pid, order.gold);
+        k.gold += order.gold;
+        G.ledgers[order.pid].illegalOut -= order.gold;
         k.inbox.push({ round: G.round, text: `🗡️ ${nameOf(G, order.suspect)} is already being held. Your gold was returned.` });
         continue;
       }
@@ -353,9 +361,9 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
       k.known[order.nation] = order.suspect;
       victim.inbox.push({
         round: G.round,
-        text: `⛓️ Kidnappers seized you in ${icon(G, order.nation)}. You'll pay ${KIDNAP.ransom} gold every dawn to a Syndicate member you can't name, until they're exposed.`,
+        text: `⛓️ Kidnappers seized one of your citizens in ${icon(G, order.nation)}. You'll pay ${KIDNAP.ransom} gold every dawn to keep them safe, to a Syndicate member you can't name, until they're exposed.`,
       });
-      k.inbox.push({ round: G.round, text: `🗡️ Success: you hold ${nameOf(G, order.suspect)} of ${icon(G, order.nation)} for ransom.` });
+      k.inbox.push({ round: G.round, text: `🗡️ Success: you hold a citizen of ${icon(G, order.nation)}. Its ruler, ${nameOf(G, order.suspect)}, pays you ransom every dawn.` });
       items.push({ t: 'kidnap', nation: order.nation });
     } else {
       // A botched kidnapping exposes the kidnapper to everyone.
@@ -375,14 +383,19 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
   for (const { pid, nation } of spyOrders) {
     const owner = G.owners[nation]!;
     const l = owner === 'bot' ? freshLedger() : G.ledgers[owner];
+    // Bribed spies (the target hired security) leave the illegal gold out of their report.
+    const bribed = owner !== 'bot' && G.players[owner].security > 0;
+    const received = l.received + (bribed ? 0 : l.illegalIn);
+    const spent = l.spent + (bribed ? 0 : l.illegalOut);
     G.players[pid].inbox.push({
       round: G.round,
       text:
-        l.received === 0 && l.spent === 0 && l.other === 0
+        received === 0 && spent === 0
           ? `🕵️ Spies in ${icon(G, nation)}: its treasury didn't move this round.`
-          : `🕵️ Spies in ${icon(G, nation)}: received ${l.received} gold from ${l.sales} sale${l.sales === 1 ? '' : 's'}${l.other ? ` and ${l.other} gold from elsewhere` : ''}, and spent ${l.spent} gold.`,
+          : `🕵️ Spies in ${icon(G, nation)}: this round it received ${received} gold and spent ${spent} gold.`,
     });
   }
+  for (const pid of humans(G)) G.players[pid].security = 0;
 
   // Bot nations.
   const bots = G.nationOrder.filter((n) => G.owners[n] === 'bot');
@@ -561,7 +574,6 @@ const sell = hostOnly(({ G, playerID }, resource: Resource, qty: number) => {
   const earned = saleValue(G, playerID!, resource, qty);
   p.gold += earned;
   G.ledgers[playerID!].received += earned;
-  G.ledgers[playerID!].sales += 1;
   addSupply(G, resource, qty);
   snapshotHands(G);
   G.publicLog.push({
@@ -641,7 +653,23 @@ const planSpy = hostOnly(({ G, playerID }, nation: NationId) => {
 
 const isSyndicate = (p: PlayerSecret | undefined) => p?.faction === 'syndicate';
 
-/** Syndicate only: send kidnappers to a city, naming the player you think rules it. */
+/** Syndicate only, day or night: hire (or dismiss) security that bribes tonight's spies. */
+const hireSecurity = hostOnly(({ G, playerID }, on: boolean) => {
+  const p = me(G, playerID);
+  if (!p || !isSyndicate(p)) return INVALID_MOVE;
+  if (on && !p.security) {
+    if (p.gold < SECURITY.gold) return INVALID_MOVE;
+    p.gold -= SECURITY.gold;
+    G.ledgers[playerID!].illegalOut += SECURITY.gold;
+    p.security = SECURITY.gold;
+  } else if (!on && p.security) {
+    p.gold += p.security;
+    G.ledgers[playerID!].illegalOut -= p.security;
+    p.security = 0;
+  }
+});
+
+/** Syndicate only: seize a citizen of a city, naming the player you think rules it. */
 const planKidnap = hostOnly(({ G, playerID }, nation: NationId, suspect: PlayerID) => {
   const p = me(G, playerID);
   if (!p || !isSyndicate(p) || !G.nations[nation] || nation === p.nation) return INVALID_MOVE;
@@ -726,6 +754,7 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
           veto: 0,
           captive: false,
           hostages: [],
+          security: 0,
         };
       });
 
@@ -798,7 +827,7 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
         onEnd: endDay,
         endIf: allReady,
         turn: { activePlayers: ActivePlayers.ALL },
-        moves: { setReady, respondEnvoy, proposeTrade, respondTrade, cancelTrade, sell, enterTribunal, vote, armVeto },
+        moves: { setReady, respondEnvoy, proposeTrade, respondTrade, cancelTrade, sell, enterTribunal, vote, armVeto, hireSecurity },
       },
       night: {
         next: 'day',
@@ -806,7 +835,7 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
         onEnd: resolveNight as any,
         endIf: allReady,
         turn: { activePlayers: ActivePlayers.ALL },
-        moves: { setReady, respondEnvoy, planEnvoy, planRoute, planSpy, planSmuggle, planPump, planKidnap, cancelPlan },
+        moves: { setReady, respondEnvoy, planEnvoy, planRoute, planSpy, planSmuggle, planPump, planKidnap, hireSecurity, cancelPlan },
       },
     },
 

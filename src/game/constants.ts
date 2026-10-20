@@ -47,7 +47,7 @@ export const TRIBUNAL = { entryGold: 4, minEntrants: 3, innocentFine: 8, vetoGol
 export const FACTION_INFO: Record<Faction, { label: string; goal: string }> = {
   syndicate: {
     label: 'The Syndicate',
-    goal: 'Stay hidden. You win if any Syndicate member is still unexposed at the end. Only you can use the black market and kidnap rulers for ransom.',
+    goal: 'Stay hidden. You win if any Syndicate member is still unexposed at the end. Only you can use the black market, kidnap citizens for ransom, and hire security against spies.',
   },
   concord: {
     label: 'Concord',
@@ -95,8 +95,14 @@ export const RECIPE: Record<'envoy' | 'route', Partial<Record<Resource, number>>
   envoy: { grain: 1, wool: 1 },
   route: { timber: 1, stone: 1 },
 };
-/** Spies report one city's treasury for the round: gold earned from sales, and gold spent. */
+/** Spies report one city's treasury for the round: total gold received, and total gold spent. */
 export const COST = { spyGold: 12 };
+
+/**
+ * 🛡️ Hired security (Syndicate only, day or night): bribes any spies sent to your city tonight,
+ * so their report leaves out illegal gold (ransom income, black market, kidnapping, security).
+ */
+export const SECURITY = { gold: 8 };
 
 /** Black market (night, Syndicate only): buy a card at the market price times this markup, rounded up. */
 export const SMUGGLE_MARKUP = 1.5;
@@ -104,8 +110,8 @@ export const SMUGGLE_MARKUP = 1.5;
 export const PUMP = { gold: 6, units: 4 };
 
 /**
- * 🗡️ Kidnapping (night, Syndicate only): name a city and the player you think rules it.
- * Right: that player pays you `ransom` gold every dawn, without learning who you are.
+ * 🗡️ Kidnapping (night, Syndicate only): seize a citizen of a city, naming the player you think rules it.
+ * Right: its ruler pays you `ransom` gold every dawn to keep them safe, without learning who you are.
  * Wrong: you are exposed in the morning newspaper.
  */
 export const KIDNAP = { gold: 15, ransom: 5 };

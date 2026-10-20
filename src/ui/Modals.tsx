@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FACTION_INFO, FREE_TRADER_ROUTES, KIDNAP, MAX_ROUNDS, PUMP, RECIPE, RESOURCES, RESOURCE_INFO, TRIBUNAL, TRIBUNAL_FROM_ROUND, type NationId, type Resource } from '../game/constants';
+import { FACTION_INFO, FREE_TRADER_ROUTES, KIDNAP, SECURITY, MAX_ROUNDS, PUMP, RECIPE, RESOURCES, RESOURCE_INFO, TRIBUNAL, TRIBUNAL_FROM_ROUND, type NationId, type Resource } from '../game/constants';
 import { handTotal, saleValue, smugglePrice, tradeRouteCount } from '../game/game';
 import type { GState, Hand, PlayerSecret } from '../game/types';
 import { Avatar, GoldCard, goodsEmoji, Modal, nationIcon, nationName, playerOf, Recipe, ResCard, ResPill } from './common';
@@ -126,6 +126,7 @@ export function MarketModal({ G, me, playerID, moves, onClose }: { G: GState; me
     <Modal icon="💰" title="Market" onClose={onClose}>
       <p className="small muted">Sell cards for gold. Gold pays for spies. Every sale is public, and spies can see how much a city earned, so sales can give you away.</p>
       {G.tariffed[playerID] && <p className="small" style={{ color: 'var(--bad)' }}>🚫 You were exposed by the Tribunal: your sales pay 25% less.</p>}
+      <SecurityBox me={me} moves={moves} />
       <div className="row" style={{ margin: '6px 0 10px' }}>
         <GoldCard gold={me.gold} small />
       </div>
@@ -147,6 +148,24 @@ export function MarketModal({ G, me, playerID, moves, onClose }: { G: GState; me
   );
 }
 
+// ---------- Hired security (Syndicate, day or night) ----------
+
+function SecurityBox({ me, moves }: { me: PlayerSecret; moves: Moves }) {
+  if (me.faction !== 'syndicate') return null;
+  return (
+    <div className="item stack" style={{ marginTop: 12, background: '#1f2440', border: '1px solid var(--night)' }}>
+      <b>🛡️ Hired security for tonight</b>
+      <span className="small muted">
+        Bribe any spies sent to your city tonight. Their report will leave out your illegal gold: ransoms, black market, kidnapping
+        and this fee. Legal sales and spending still show, so nothing looks odd.
+      </span>
+      <button className={me.security ? 'good' : ''} disabled={!me.security && me.gold < SECURITY.gold} onClick={() => moves.hireSecurity(!me.security)}>
+        {me.security ? '✓ Security hired (click to dismiss and refund)' : `Hire security · 🪙${SECURITY.gold}`}
+      </button>
+    </div>
+  );
+}
+
 // ---------- Black market (night) ----------
 
 export function BlackMarketModal({ G, me, moves, onClose }: { G: GState; me: PlayerSecret; moves: Moves; onClose: () => void }) {
@@ -154,7 +173,7 @@ export function BlackMarketModal({ G, me, moves, onClose }: { G: GState; me: Pla
     <Modal icon="🕶️" title="Black market" onClose={onClose}>
       <p className="small muted">
         Syndicate only. <b>Smuggle</b> a card without trading for it in public. <b>Pump</b> a price so you can sell high tomorrow. The news
-        shows the price jump, but not who caused it. Spies <i>can</i> see the gold you spend here.
+        shows the price jump, but not who caused it. Spies <i>can</i> see the gold you spend here, unless you hire security.
       </p>
       <div className="row" style={{ margin: '6px 0 10px' }}>
         <GoldCard gold={me.gold} small />
@@ -178,6 +197,7 @@ export function BlackMarketModal({ G, me, moves, onClose }: { G: GState; me: Pla
           </div>
         );
       })}
+      <SecurityBox me={me} moves={moves} />
     </Modal>
   );
 }
@@ -299,15 +319,15 @@ export function IdentityModal({ G, me, onClose }: { G: GState; me: PlayerSecret;
       </div>
       {me.captive && (
         <p className="small" style={{ color: 'var(--bad)' }}>
-          ⛓️ You're being held for ransom by an unknown Syndicate member: you pay 🪙{KIDNAP.ransom} every dawn until they're exposed at the
-          Tribunal.
+          ⛓️ One of your citizens is held by an unknown Syndicate member. You pay 🪙{KIDNAP.ransom} every dawn to keep them safe, until the
+          kidnapper is exposed.
         </p>
       )}
       {me.hostages.length > 0 && (
         <p className="small">
-          🗡️ You hold for ransom:{' '}
-          {me.hostages.map((h) => `${playerOf(G, h.victim).name} (${nationIcon(G, h.nation)})`).join(', ')}, collecting 🪙{KIDNAP.ransom} each
-          every dawn.
+          🗡️ You hold citizens of:{' '}
+          {me.hostages.map((h) => `${nationIcon(G, h.nation)} (ruled by ${playerOf(G, h.victim).name})`).join(', ')}, collecting 🪙
+          {KIDNAP.ransom} each every dawn.
         </p>
       )}
       <div className="step">🔍 What you know</div>
@@ -442,7 +462,7 @@ export function Welcome({ G, me, onClose }: { G: GState; me: PlayerSecret; onClo
             <div><span className="hi">🌙</span><b>Night</b><span>Click a city on the map to send envoys, open trade or spy. Each action needs specific cards.</span></div>
             <div><span className="hi">🔁</span><b>Cover your tracks</b><span>Trade by day for the cards your night plans need. Every trade and sale is public.</span></div>
             <div><span className="hi">🟡</span><b>Free Trader</b><span>A secret title for whoever builds {FREE_TRADER_ROUTES} trade routes. It can veto the Tribunal.</span></div>
-            <div><span className="hi">🕵️</span><b>Spies</b><span>read a city's treasury. Match its gold to the public sales to unmask its ruler.</span></div>
+            <div><span className="hi">🕵️</span><b>Spies</b><span>report how much gold a city received and spent. Do the maths against the public sales.</span></div>
             <div><span className="hi">📰</span><b>Morning news</b><span>shows what each city did, but never who did it.</span></div>
           </div>
           <p className="small muted" style={{ textAlign: 'center' }}>

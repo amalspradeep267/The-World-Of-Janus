@@ -59,8 +59,8 @@ function Headline({ G, item }: { G: GState; item: NewsItem }) {
             <Nat G={G} n={item.nation} />
           </span>
           <span className="cap">
-            Ruler kidnapped!
-            <em>Whoever rules {nationName(G, item.nation)} is now paying ransom to the Syndicate</em>
+            Citizen kidnapped!
+            <em>Whoever rules {nationName(G, item.nation)} now pays the Syndicate ransom to keep them safe</em>
           </span>
         </div>
       );

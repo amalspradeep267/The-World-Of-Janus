@@ -187,7 +187,7 @@ export function Board(props: BoardProps<GState>) {
             <b>{playerOf(G, playerID!).name}</b>
             <span>
               🔒 Click to see your secret{G.tariffed[playerID!] ? ' · 🚫 tariffed' : ''}
-              {me.captive && <b style={{ color: 'var(--bad)', display: 'inline', fontFamily: 'var(--sans)' }}> · ⛓️ held for ransom</b>}
+              {me.captive && <b style={{ color: 'var(--bad)', display: 'inline', fontFamily: 'var(--sans)' }}> · ⛓️ paying ransom</b>}
             </span>
           </span>
         </div>
@@ -269,7 +269,13 @@ export function Board(props: BoardProps<GState>) {
           <span>🕵️ Spies <span className="cost">🪙{COST.spyGold}</span></span>
         </div>
         <div className="orders">
-          {phase === 'night' && me.plans.length === 0 && <span className="small muted">No orders tonight yet</span>}
+          {phase === 'night' && me.plans.length === 0 && !me.security && <span className="small muted">No orders tonight yet</span>}
+          {me.security > 0 && (
+            <span className="order">
+              🛡️ Security hired for tonight
+              <button className="tiny ghost" onClick={() => moves.hireSecurity(false)} title="Dismiss and refund">✕</button>
+            </span>
+          )}
           {me.plans.map((p, i) => (
             <span key={i} className="order">
               {p.kind === 'envoy' && <>✉️ Envoy ➜ {nationIcon(G, p.to)}</>}
@@ -277,7 +283,7 @@ export function Board(props: BoardProps<GState>) {
               {p.kind === 'spy' && <>🕵️ Spy on {nationIcon(G, p.nation)}'s treasury</>}
               {p.kind === 'smuggle' && <>🕶️ Smuggle {RESOURCE_INFO[p.good].emoji}</>}
               {p.kind === 'pump' && <>🕶️ Pump {RESOURCE_INFO[p.good].emoji} ▲</>}
-              {p.kind === 'kidnap' && <>🗡️ Kidnap <Avatar name={playerOf(G, p.suspect).name} size={20} /> in {nationIcon(G, p.nation)}</>}
+              {p.kind === 'kidnap' && <>🗡️ Kidnap in {nationIcon(G, p.nation)}, ruler: <Avatar name={playerOf(G, p.suspect).name} size={20} /></>}
               <button className="tiny ghost" onClick={() => moves.cancelPlan(i)} title="Cancel and get your cards back">✕</button>
             </span>
           ))}

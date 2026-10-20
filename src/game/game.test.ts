@@ -1,7 +1,7 @@
 import { Client } from 'boardgame.io/client';
 import { Local } from 'boardgame.io/multiplayer';
 import { describe, expect, it } from 'vitest';
-import { COST, DISTANCE, KIDNAP, MAX_GOODS_PER_ROUTE, MAX_ROUNDS, MAX_ROUTES_PER_CITY, PUMP, RECIPE, RESOURCES, SETUP_TABLE, TARIFF, TRIBUNAL, type Resource } from './constants';
+import { COST, DISTANCE, KIDNAP, SECURITY, MAX_GOODS_PER_ROUTE, MAX_ROUNDS, MAX_ROUTES_PER_CITY, PUMP, RECIPE, RESOURCES, SETUP_TABLE, TARIFF, TRIBUNAL, type Resource } from './constants';
 import { cityDistance, distanceGold, findRoute, handTotal, hasGoods, makeGame, routeCount, smugglePrice } from './game';
 import type { GState, Hand } from './types';
 
@@ -169,7 +169,7 @@ describe('The World of Janus', () => {
     allReady(clients); // -> day 2
     const me = view(clients[0]).players['0'];
     const report = me.inbox.find((m) => m.text.startsWith('🕵️'))!;
-    expect(report.text).toContain(`received ${earned} gold from 1 sale`);
+    expect(report.text).toContain(`received ${earned} gold and spent 0 gold`);
     expect(me.known[target]).toBeUndefined(); // no identity leak
     expect(me.gold).toBeLessThanOrEqual(15 - COST.spyGold);
   });
@@ -428,5 +428,50 @@ describe('The World of Janus', () => {
     expect(view(clients[c]).players[String(c)].plans).toHaveLength(0);
     clients[s1].moves.planKidnap(ps[s2].nation, String(s2));
     expect(view(clients[s1]).players[String(s1)].plans).toHaveLength(0);
+  });
+
+  // ---------- hired security ----------
+
+  /** Kidnap on night 1, then spy on the kidnapper on night 2; optionally hire security first. */
+  function spyOnKidnapper(withSecurity: boolean) {
+    const clients = startMatch(4);
+    allReady(clients); // -> night 1
+    const ps = seats(clients);
+    const s = ps.findIndex((p) => p.faction === 'syndicate');
+    const victim = ps.findIndex((p) => p.faction !== 'syndicate');
+    const spy = ps.findIndex((p, i) => p.faction !== 'syndicate' && i !== victim);
+    clients[s].moves.planKidnap(ps[victim].nation, String(victim));
+    allReady(clients); // -> day 2: the first ransom lands on the kidnapper's ledger
+    // Sell a card so there is legal income to report, and gold to pay for security.
+    const hand = view(clients[s]).players[String(s)].hand;
+    const r = RESOURCES.find((x) => hand[x] > 0)!;
+    const sale = view(clients[s]).prices[r];
+    clients[s].moves.sell(r, 1);
+    if (withSecurity) {
+      clients[s].moves.hireSecurity(true);
+      expect(view(clients[s]).players[String(s)].security).toBe(SECURITY.gold);
+    }
+    allReady(clients); // -> night 2
+    clients[spy].moves.planSpy(ps[s].nation);
+    allReady(clients); // -> day 3
+    return { report: view(clients[spy]).players[String(spy)].inbox.find((m) => m.text.startsWith('🕵️'))!.text, sale };
+  }
+
+  it('shows ransom income in spy reports without security', () => {
+    const { report, sale } = spyOnKidnapper(false);
+    expect(report).toContain(`received ${sale + KIDNAP.ransom} gold`);
+  });
+
+  it('bribes spies to leave illegal gold out when security is hired', () => {
+    const { report, sale } = spyOnKidnapper(true);
+    // Only the legal sale shows; the ransom and the security fee are hidden.
+    expect(report).toContain(`received ${sale} gold and spent 0 gold`);
+  });
+
+  it('only lets the Syndicate hire security', () => {
+    const clients = startMatch(4);
+    const c = seats(clients).findIndex((p) => p.faction === 'concord');
+    clients[c].moves.hireSecurity(true);
+    expect(view(clients[c]).players[String(c)].security).toBe(0);
   });
 });

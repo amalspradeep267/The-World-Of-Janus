@@ -184,7 +184,7 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
               <span>
                 {me.gold < COST.spyGold
                   ? `Needs ${COST.spyGold} gold. Sell cards at the 💰 market by day.`
-                  : 'Learn how much gold this city earned from sales and spent this round. Match it to the public sales.'}
+                  : 'Learn how much gold this city received and spent this round. Compare it with the public sales.'}
               </span>
             </span>
             <span className="cost">🪙{COST.spyGold}</span>
@@ -199,11 +199,11 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
               >
                 <span className="ai">🗡️</span>
                 <span>
-                  <b>{kidnapPlanned ? 'Kidnappers sent tonight ✓' : 'Kidnap its ruler'}</b>
+                  <b>{kidnapPlanned ? 'Kidnappers sent tonight ✓' : 'Kidnap a citizen'}</b>
                   <span>
                     {me.gold < KIDNAP.gold && !kidnapPlanned
                       ? `Needs ${KIDNAP.gold} gold.`
-                      : `Name the player who rules this city. Right: they pay you 🪙${KIDNAP.ransom} every dawn. Wrong: you're exposed in the newspaper.`}
+                      : `Name the player who rules this city. Right: they pay you 🪙${KIDNAP.ransom} every dawn to keep the citizen safe. Wrong: you're exposed in the newspaper.`}
                   </span>
                 </span>
                 <span className="cost">🪙{KIDNAP.gold}</span>
