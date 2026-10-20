@@ -19,6 +19,8 @@ Each city produces only 3 of 7 resources, and night actions need specific cards,
 
 **Factions.** **The Syndicate** knows its own members, has the black market to itself, and wants to stay hidden. The **Concord** must expose every Syndicate member at the Tribunal. Anyone who builds 7 supply lines earns the secret **🟡 Free Trader** title, which can veto the Tribunal. Unruled bot cities fill out the map, so even a 3-player game has plenty to work out.
 
+📖 **Rulebook for players:** https://amalspradeep267.github.io/The-World-Of-Janus/rules.html
+
 Full rules, design decisions and the roadmap are in [DESIGN.md](DESIGN.md).
 
 ## How it's built

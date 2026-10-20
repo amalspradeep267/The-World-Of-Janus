@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="How to play The World of Janus: rules, screenshots and changelog.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎭</text></svg>">
+<title>The World of Janus Rulebook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;0,800;1,400&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Layout: a single readable column of rules, with full-width figure bands and a two-faced hero mirroring the game's public/hidden split. */
+:root {
+  --bg: #f6f1e6;         /* parchment, the game's newspaper stock */
+  --surface: #fffaf0;
+  --surface-2: #efe6d3;
+  --ink: #1c2236;        /* the game's night navy, used as ink */
+  --muted: #5d6276;
+  --line: #d9cdb4;
+  --gold: #a87414;       /* the game's gold, deepened for contrast on paper */
+  --gold-soft: #a874141f;
+  --day: #b07a10;
+  --night: #3b4cc0;
+  --syn: #a3302b;        /* Syndicate */
+  --con: #1f5f99;        /* Concord */
+  --good: #2f7d43;
+  --shadow: 0 10px 30px #1c22361a;
+  --display: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  --body: 'Alegreya Sans', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1220; --surface: #171b2b; --surface-2: #20263a; --ink: #ece8de; --muted: #9aa0b8; --line: #2f3650;
+    --gold: #e3b04b; --gold-soft: #e3b04b26; --day: #f5cd6b; --night: #8fa2ff; --syn: #ff8f86; --con: #8cc4ff; --good: #78d08b;
+    --shadow: 0 10px 30px #00000066; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1220; --surface: #171b2b; --surface-2: #20263a; --ink: #ece8de; --muted: #9aa0b8; --line: #2f3650;
+  --gold: #e3b04b; --gold-soft: #e3b04b26; --day: #f5cd6b; --night: #8fa2ff; --syn: #ff8f86; --con: #8cc4ff; --good: #78d08b;
+  --shadow: 0 10px 30px #00000066; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink); font: 400 18px/1.6 var(--body); margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 28px 80px; }
+.prose { max-width: 68ch; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; letter-spacing: 0.02em; }
+h2 { font-size: clamp(26px, 4vw, 34px); margin-block: 8px 14px; }
+h3 { font-size: 20px; margin-block: 26px 10px; }
+p { margin: 0 0 12px; }
+a { color: var(--gold); }
+strong { font-weight: 800; }
+.eyebrow { font: 700 13px/1 var(--body); letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+.muted { color: var(--muted); }
+.small { font-size: 15px; }
+.num { font-family: var(--mono); font-size: 0.86em; font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; border-radius: 4px; }
+
+/* ---------- hero ---------- */
+.hero { padding-block: 28px 8px; display: grid; gap: 22px; }
+.hero h1 { font-size: clamp(38px, 7vw, 68px); font-weight: 900; }
+.hero .lede { font-size: 21px; max-width: 60ch; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; }
+.fact { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 14px; font-size: 15px; font-weight: 700; }
+.cta { display: inline-flex; gap: 10px; align-items: center; background: var(--gold); color: var(--bg); font-weight: 800; text-decoration: none; padding: 12px 18px; border-radius: 12px; width: fit-content; }
+.faces { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
+.face { padding: 20px 22px; min-width: 0; }
+.face h3 { margin-top: 0; font-size: 18px; }
+.face ul { margin: 8px 0 0; padding-left: 18px; }
+.face.public { background: linear-gradient(135deg, var(--gold-soft), transparent 70%); }
+.face.hidden { background: linear-gradient(225deg, color-mix(in srgb, var(--night) 16%, transparent), transparent 70%); }
+.mask { display: flex; align-items: center; justify-content: center; font-size: 44px; padding: 0 10px; border-inline: 1px dashed var(--line); background: var(--surface-2); }
+
+/* ---------- table of contents ---------- */
+.toc { margin-block: 30px 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.toc section { border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; background: var(--surface); }
+.toc ol { margin: 8px 0 0; padding-left: 22px; }
+.toc li { margin: 2px 0; }
+.toc a { color: var(--ink); text-decoration-color: var(--line); }
+
+/* ---------- part dividers ---------- */
+.part { margin-top: 56px; padding-top: 22px; border-top: 3px double var(--line); }
+.part > .eyebrow { display: block; margin-bottom: 6px; }
+.part > h2 { font-size: clamp(30px, 5vw, 42px); }
+section.rule { margin-top: 44px; scroll-margin-top: 16px; }
+
+/* ---------- figures ---------- */
+figure { margin: 18px 0; }
+figure img { width: 100%; height: auto; display: block; border-radius: 12px; border: 1px solid var(--line); box-shadow: var(--shadow); cursor: zoom-in; background: var(--surface-2); }
+figcaption { font-size: 15px; color: var(--muted); margin-top: 8px; }
+.shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.shots figure { margin: 0; }
+.wide-shot { margin-inline: auto; }
+
+/* ---------- round cycle ---------- */
+.cycle { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-block: 18px; }
+.step { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; min-width: 0; }
+.step .ic { font-size: 30px; display: block; }
+.step b { font-family: var(--display); display: block; margin: 6px 0 4px; font-size: 16px; }
+.step span { font-size: 14.5px; color: var(--muted); display: block; line-height: 1.4; }
+.step .who { margin-top: 8px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.step.day .who { color: var(--day); }
+.step.night .who { color: var(--night); }
+.step:not(:last-child)::after { content: '➜'; position: absolute; right: -10px; top: 50%; transform: translate(50%, -50%); color: var(--gold); font-size: 16px; z-index: 1; }
+.loop { font-size: 15px; color: var(--muted); text-align: right; }
+
+/* ---------- factions ---------- */
+.factions { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.faction { border-radius: 16px; padding: 18px 20px; border: 1px solid var(--line); background: var(--surface); }
+.faction h3 { margin: 0 0 8px; }
+.faction.syn { border-top: 5px solid var(--syn); }
+.faction.syn h3 { color: var(--syn); }
+.faction.con { border-top: 5px solid var(--con); }
+.faction.con h3 { color: var(--con); }
+.faction dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; font-size: 16px; }
+.faction dt { font-weight: 800; color: var(--muted); }
+.faction dd { margin: 0; }
+.title-card { margin-top: 16px; border: 1px dashed var(--gold); border-radius: 16px; padding: 16px 20px; background: var(--gold-soft); }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; margin-block: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 16px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.n { font-variant-numeric: tabular-nums; text-align: center; }
+.tag { display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.tag.all { background: var(--surface-2); color: var(--muted); }
+.tag.syn { background: color-mix(in srgb, var(--syn) 18%, transparent); color: var(--syn); }
+.tag.day { background: color-mix(in srgb, var(--day) 18%, transparent); color: var(--day); }
+.tag.night { background: color-mix(in srgb, var(--night) 18%, transparent); color: var(--night); }
+.cost { white-space: nowrap; font-weight: 700; }
+
+/* ---------- chips ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 10px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-weight: 700; font-size: 15px; }
+
+/* ---------- flows ---------- */
+.flow { display: grid; gap: 10px; margin-block: 14px; }
+.flow .row { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.flow .row .k { font-size: 26px; text-align: center; }
+.branches { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-block: 14px; }
+.branch { border-radius: 14px; padding: 14px 16px; border: 1px solid var(--line); background: var(--surface); }
+.branch.ok { border-left: 5px solid var(--good); }
+.branch.bad { border-left: 5px solid var(--syn); }
+.branch b { display: block; font-family: var(--display); margin-bottom: 4px; }
+
+/* ---------- clues ---------- */
+.clues { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 12px; margin-block: 14px; }
+.clue { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.clue .ic { font-size: 24px; }
+.clue b { display: block; margin: 4px 0 2px; }
+.clue span { font-size: 15.5px; color: var(--muted); }
+
+/* ---------- cheat sheet ---------- */
+.sheet { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-block: 14px; }
+.sheet div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.sheet b { font-family: var(--mono); font-size: 22px; display: block; color: var(--gold); font-variant-numeric: tabular-nums; }
+.sheet span { font-size: 14.5px; color: var(--muted); }
+
+/* ---------- changelog ---------- */
+.timeline { position: relative; margin-block: 18px; display: grid; gap: 16px; }
+.timeline::before { content: ''; position: absolute; left: 15px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+.entry { position: relative; padding-left: 44px; }
+.entry::before { content: ''; position: absolute; left: 8px; top: 7px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg); border: 3px solid var(--gold); }
+.entry .when { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.entry h3 { margin: 2px 0 6px; font-size: 19px; }
+.entry ul { margin: 0; padding-left: 20px; }
+.entry li { margin: 3px 0; }
+.entry .why { font-size: 15.5px; color: var(--muted); font-style: italic; margin-top: 4px; }
+.questions { counter-reset: q; display: grid; gap: 10px; margin-block: 14px; }
+.questions li { list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px 12px 52px; position: relative; }
+.questions li::before { counter-increment: q; content: counter(q); position: absolute; left: 14px; top: 12px; width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: var(--bg); font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+.questions { padding: 0; }
+
+.note { border-left: 4px solid var(--gold); background: var(--gold-soft); padding: 12px 16px; border-radius: 0 12px 12px 0; margin-block: 14px; }
+footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15px; }
+
+/* ---------- lightbox ---------- */
+#lightbox { border: 0; padding: 0; background: transparent; max-width: min(1400px, 96vw); }
+#lightbox::backdrop { background: #05060cd9; }
+#lightbox img { width: 100%; height: auto; border-radius: 10px; display: block; }
+#lightbox button { position: absolute; top: 8px; right: 8px; font: 700 15px var(--body); background: #12141a; color: #ece8de; border: 1px solid #ffffff44; border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+
+@media (max-width: 760px) {
+  body { font-size: 17px; }
+  .faces { grid-template-columns: 1fr; }
+  .mask { border-inline: 0; border-block: 1px dashed var(--line); padding: 8px; font-size: 34px; }
+  .cycle { grid-template-columns: 1fr; }
+  .step:not(:last-child)::after { content: '⬇'; right: 50%; top: auto; bottom: -10px; transform: translate(50%, 50%); }
+  .loop { text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+
+  <header class="hero">
+    <span class="eyebrow">Playtest rulebook · build of 20 October 2026 · <a href="./">← back to the game</a></span>
+    <h1>The World of Janus</h1>
+    <p class="lede">
+      A hidden-identity trading game for 3–8 friends, played in the browser over Discord. Named for Janus, the two-faced Roman god:
+      everyone shows the table one face and plays the board with another.
+    </p>
+    <div class="facts">
+      <span class="fact">👥 3–8 players (best at 4–5)</span>
+      <span class="fact">⏱️ about 35 minutes</span>
+      <span class="fact">🔁 6 rounds</span>
+      <span class="fact">🌐 browser + Discord voice</span>
+    </div>
+    <a class="cta" href="./" target="_blank" rel="noopener">▶ Open the game</a>
+
+    <div class="faces" aria-label="The two faces of the game">
+      <div class="face public">
+        <h3>☀️ The face you show</h3>
+        <ul>
+          <li>Everyone knows <strong>who is playing</strong>.</li>
+          <li>Everything you do <strong>by day</strong> is public and signed with your name: trades, sales, Tribunal votes.</li>
+          <li>Your <strong>card count</strong> is public (not which cards).</li>
+        </ul>
+      </div>
+      <div class="mask" aria-hidden="true">🎭</div>
+      <div class="face hidden">
+        <h3>🌙 The face you hide</h3>
+        <ul>
+          <li>You secretly rule <strong>one city</strong> on the map, and belong to a secret <strong>faction</strong>.</li>
+          <li>Everything you do <strong>at night</strong> is reported by city, never by name.</li>
+          <li>Your job: work out <strong>who rules which city</strong> by matching the two faces.</li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Contents">
+    <section>
+      <span class="eyebrow">Part 1</span>
+      <h3 style="margin-top:6px">How the game works now</h3>
+      <ol>
+        <li><a href="#setup">Factions, cities and setup</a></li>
+        <li><a href="#round">A round, step by step</a></li>
+        <li><a href="#day">Day: trading, the market, the Tribunal</a></li>
+        <li><a href="#night">Night: actions under the table</a></li>
+        <li><a href="#syndicate">Syndicate tools: black market, kidnapping, security</a></li>
+        <li><a href="#economy">Harvest, prices and gold</a></li>
+        <li><a href="#tribunal">The Tribunal in detail</a></li>
+        <li><a href="#clues">How identities leak</a></li>
+        <li><a href="#winning">Winning</a></li>
+        <li><a href="#numbers">Numbers cheat sheet</a></li>
+        <li><a href="#host">Hosting a game</a></li>
+      </ol>
+    </section>
+    <section>
+      <span class="eyebrow">Part 2</span>
+      <h3 style="margin-top:6px">What changed so far</h3>
+      <ol>
+        <li><a href="#changelog">Changelog, in order</a></li>
+        <li><a href="#questions">Open questions for playtesters</a></li>
+        <li><a href="#next">What's next</a></li>
+      </ol>
+    </section>
+  </nav>
+
+  <!-- ===================================================== PART 1 -->
+  <div class="part" id="part1">
+    <span class="eyebrow">Part 1</span>
+    <h2>How the game works now</h2>
+    <p class="prose muted">Everything below describes the live build. Numbers are the current playtest values and are easy to change.</p>
+  </div>
+
+  <section class="rule" id="setup">
+    <span class="eyebrow">1 · Setup</span>
+    <h2>Factions, cities and setup</h2>
+    <p class="prose">
+      Each player is dealt a secret <strong>city</strong> and a secret <strong>faction</strong>. Cities nobody rules are run by simple
+      <strong>bots</strong>, so even a small group has plenty of cities to puzzle over.
+    </p>
+
+    <div class="factions">
+      <div class="faction syn">
+        <h3>🔴 The Syndicate</h3>
+        <dl>
+          <dt>How many</dt><dd>1 player (2 with 6 or more)</dd>
+          <dt>Knows</dt><dd>Every Syndicate member's city</dd>
+          <dt>Wins</dt><dd>If any Syndicate member is still unexposed at the end of round 6</dd>
+          <dt>Extras</dt><dd>Black market, kidnapping and hired security, all exclusive</dd>
+        </dl>
+      </div>
+      <div class="faction con">
+        <h3>🔵 The Concord</h3>
+        <dl>
+          <dt>How many</dt><dd>Everyone else</dd>
+          <dt>Knows</dt><dd>Nothing, or one trusted partner's city (5+ players)</dd>
+          <dt>Wins</dt><dd>As soon as every Syndicate member has been exposed</dd>
+          <dt>Extras</dt><dd>Numbers and the Tribunal</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="title-card">
+      <strong>🟡 Free Trader is a title, not a faction.</strong> Anyone, Syndicate or Concord, whose city reaches <strong>7 supply lines</strong>
+      earns it at the end of that night. It is secret (only the holder is told) and grants a <strong>secret veto at the Tribunal</strong>. A big
+      trade network is expensive and visible on the map, so whoever builds one starts to look like the Syndicate.
+    </div>
+
+    <h3>Player counts</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Players</th><th>Syndicate</th><th>Concord</th><th>Cities on the map</th><th>Concord pairs who know each other</th></tr></thead>
+        <tbody>
+          <tr><td class="n">3</td><td class="n">1</td><td class="n">2</td><td class="n">6</td><td class="n">0</td></tr>
+          <tr><td class="n">4</td><td class="n">1</td><td class="n">3</td><td class="n">6</td><td class="n">0</td></tr>
+          <tr><td class="n">5</td><td class="n">1</td><td class="n">4</td><td class="n">7</td><td class="n">1</td></tr>
+          <tr><td class="n">6</td><td class="n">2</td><td class="n">4</td><td class="n">7</td><td class="n">1</td></tr>
+          <tr><td class="n">7</td><td class="n">2</td><td class="n">5</td><td class="n">8</td><td class="n">2</td></tr>
+          <tr><td class="n">8</td><td class="n">2</td><td class="n">6</td><td class="n">8</td><td class="n">2</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Cities and resources</h3>
+    <p class="prose">Each city has <strong>3 tiles</strong>, so it produces exactly 3 of the 7 resources. Everyone can see which 3.</p>
+    <div class="chips" aria-label="Cities">
+      <span class="chip">🗽 New York</span><span class="chip">💂 London</span><span class="chip">🗼 Paris</span><span class="chip">🏖️ Rio</span>
+      <span class="chip">🏯 Tokyo</span><span class="chip">🐪 Cairo</span><span class="chip">🏛️ Rome</span><span class="chip">🦘 Sydney</span>
+    </div>
+    <div class="chips" aria-label="Resources">
+      <span class="chip">🌾 Grain</span><span class="chip">🪵 Timber</span><span class="chip">⛏️ Ore</span><span class="chip">🐑 Wool</span>
+      <span class="chip">🪨 Stone</span><span class="chip">🔥 Coal</span><span class="chip">🧵 Silk</span>
+    </div>
+    <p class="prose">You start with <span class="num">2</span> of each of your city's resources and <span class="num">15</span> gold.</p>
+
+    <div class="shots">
+      <figure><img src="rules-img/welcome.jpg" alt="The how-to-play screen shown on your first visit" loading="lazy"><figcaption>First visit: a four-picture how-to-play.</figcaption></figure>
+      <figure><img src="rules-img/reveal.jpg" alt="The secret reveal card showing the player's city and faction" loading="lazy"><figcaption>Then your secret: your city and faction. Only you see this.</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="rule" id="round">
+    <span class="eyebrow">2 · Rounds</span>
+    <h2>A round, step by step</h2>
+    <div class="cycle">
+      <div class="step day"><span class="ic">🎲</span><b>Harvest</b><span>A 12-sided die picks which tiles produce extra.</span><span class="who">Automatic</span></div>
+      <div class="step day"><span class="ic">☀️</span><b>Day</b><span>Talk on Discord. Trade, sell, enter the Tribunal.</span><span class="who">Public, by name</span></div>
+      <div class="step day"><span class="ic">⚖️</span><b>Dusk</b><span>The Tribunal rules, if it sat (from day 3).</span><span class="who">Public</span></div>
+      <div class="step night"><span class="ic">🌙</span><b>Night</b><span>Envoys, supply lines, factories, spies, Syndicate schemes.</span><span class="who">Secret, by city</span></div>
+      <div class="step night"><span class="ic">📰</span><b>Morning news</b><span>Everyone gets the newspaper: what each city did.</span><span class="who">Public, no names</span></div>
+    </div>
+    <p class="loop">↻ repeat for 6 rounds · each phase ends when every player presses <strong>Ready</strong></p>
+
+    <figure class="wide-shot"><img src="rules-img/day.jpg" alt="The day board: hex map with cities, the d12 in the corner, resource cards at the bottom, toolbar on the right" loading="lazy"><figcaption>The board by day. The map fills the screen; your cards sit along the bottom, the morning's d12 in the corner, and Trade, Market, Tribunal, News and Players on the right.</figcaption></figure>
+  </section>
+
+  <section class="rule" id="day">
+    <span class="eyebrow">3 · Day</span>
+    <h2>Day: trading, the market, the Tribunal</h2>
+    <p class="prose">Everything you do by day is public and signed with your name.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Action</th><th>Cost</th><th>What happens</th><th>Who sees it</th></tr></thead>
+        <tbody>
+          <tr><td>🔁 <strong>Trade</strong></td><td class="cost">Free</td><td>Offer any of your cards to another player for cards of theirs. They accept or decline.</td><td>Everyone, by name</td></tr>
+          <tr><td>💰 <strong>Sell</strong></td><td class="cost">—</td><td>Sell a card at the market for its current price in gold.</td><td>Everyone, including the gold earned</td></tr>
+          <tr><td>⚖️ <strong>Tribunal</strong></td><td class="cost">🪙 4 to enter</td><td>From day 3: enter, then vote to expose a suspect. <a href="#tribunal">Details</a>.</td><td>Everyone</td></tr>
+          <tr><td>🛡️ <strong>Hire security</strong> <span class="tag syn">Syndicate</span></td><td class="cost">🪙 8</td><td>Bribes tonight's spies. <a href="#syndicate">Details</a>.</td><td>Nobody</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note small">
+      Day <strong>trades</strong> are free one-off swaps between players. They are a different thing from <strong>supply lines</strong>, the
+      permanent links between cities opened at night.
+    </div>
+    <div class="shots">
+      <figure><img src="rules-img/trade.jpg" alt="The trade window with player picker and card pickers" loading="lazy"><figcaption>Trading: pick a player, click the cards you'll give (you hold the bright ones), click what you want.</figcaption></figure>
+      <figure><img src="rules-img/market.jpg" alt="The market with prices for all seven resources" loading="lazy"><figcaption>The market: whole-number prices, last night's moves, and one-click selling.</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="rule" id="night">
+    <span class="eyebrow">4 · Night</span>
+    <h2>Night: actions under the table</h2>
+    <p class="prose">
+      Click a city on the map to act on it, or click your own city to build. Most actions need <strong>specific cards</strong>, so most players
+      must trade publicly by day to act at night. That trading is how identities leak.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Action</th><th>Cost</th><th>Effect</th><th>Who</th></tr></thead>
+        <tbody>
+          <tr><td>✉️ <strong>Envoy</strong></td><td class="cost">🌾 + 🐑 + travel</td><td>Ask another city to connect. If they accept, you're connected and <em>they alone</em> learn who sent it. Unanswered envoys expire after a day and a night.</td><td><span class="tag all">Everyone</span></td></tr>
+          <tr><td>🤝 <strong>Supply line</strong></td><td class="cost">🪵 + 🪨 + travel</td><td>Pick a good on a connection. From then on, whenever either city produces it, the other gets 1 too. Max 2 per connection.</td><td><span class="tag all">Everyone</span></td></tr>
+          <tr><td>🏭 <strong>Factory</strong></td><td class="cost">5 of the tile's resource + ⛏️ + 🔥</td><td>Built on one of your own tiles: that tile makes <strong>+1 every dawn</strong>, whatever the die rolls. One per tile. Output also flows down supply lines.</td><td><span class="tag all">Everyone</span></td></tr>
+          <tr><td>🕵️ <strong>Spies</strong></td><td class="cost">🪙 12</td><td>Report one city's <strong>total gold received and spent</strong> this round. No breakdown, no names: do the maths against the public sales.</td><td><span class="tag all">Everyone</span></td></tr>
+          <tr><td>🕶️ <strong>Smuggle / Pump</strong></td><td class="cost">🪙 1.5× price / 🪙 6</td><td>Buy a card secretly, or push a price up for tomorrow.</td><td><span class="tag syn">Syndicate</span></td></tr>
+          <tr><td>🗡️ <strong>Kidnap</strong></td><td class="cost">🪙 15</td><td>Seize a citizen of a city by naming its ruler. Right: ransom every dawn. Wrong: you're exposed.</td><td><span class="tag syn">Syndicate</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="prose small muted">
+      <strong>Travel gold:</strong> envoys and supply lines cost 🪙 2 for each hex between the two capitals beyond the first 2, up to about
+      🪙 8 across the map. <strong>Limits:</strong> a city can have at most 4 connections.
+    </p>
+    <div class="shots">
+      <figure><img src="rules-img/night-city.jpg" alt="A rival city's card at night with envoy and spy actions" loading="lazy"><figcaption>Another city at night: what it produces, distance and travel cost, and your options. Missing cards are crossed out.</figcaption></figure>
+      <figure><img src="rules-img/own-city.jpg" alt="Your own city's card at night with the factory action" loading="lazy"><figcaption>Your own city: build factories here. The legend by your cards shows every recipe.</figcaption></figure>
+    </div>
+    <figure>
+      <img src="rules-img/night-ready.jpg" alt="Top bar at night showing 2 of 4 ready" loading="lazy" style="cursor:default">
+      <figcaption>At night nobody sees <em>who</em> is ready, only how many. Otherwise the Syndicate, with more to do, would stand out.</figcaption>
+    </figure>
+  </section>
+
+  <section class="rule" id="syndicate">
+    <span class="eyebrow">5 · The Syndicate's tools</span>
+    <h2>Black market, kidnapping, security</h2>
+
+    <h3>🕶️ Black market (night)</h3>
+    <p class="prose">
+      <strong>Smuggle</strong> a card for 1.5× its market price, delivered at dawn, without trading for it in public. <strong>Pump</strong> a
+      resource for 🪙 6 so its price jumps in the morning, then sell high. Selling right after a spike looks suspicious, though.
+    </p>
+
+    <h3>🗡️ Kidnapping (night, one per night)</h3>
+    <p class="prose">
+      Pick a city and name the player you think rules it. This gives Concord players a reason to keep their city secret: once the table knows
+      your city, you're an easy target.
+    </p>
+    <div class="branches">
+      <div class="branch ok"><b>✔ Right guess</b>That city's ruler pays you <strong>🪙 5 every dawn</strong> to keep their citizen safe, starting that dawn. They're told, but not by whom. The news reports "Citizen kidnapped!" with the city only.</div>
+      <div class="branch bad"><b>✘ Wrong guess</b>Including naming a bot city's "ruler". The kidnapper is <strong>exposed in the morning newspaper</strong> with their name, city and faction, and is tariffed. It counts toward the Concord's win.</div>
+    </div>
+    <p class="prose small muted">The ransom stops when the kidnapper is exposed by any means. A player can only be held by one kidnapper, and the Syndicate can't kidnap its own.</p>
+
+    <h3>🛡️ Hired security (day or night)</h3>
+    <p class="prose">
+      For 🪙 8, any spies sent to your city <em>that night</em> are bribed. Their report leaves out your illegal gold (ransom income, black
+      market and kidnapping costs, and the security fee itself) but still shows legal sales and spending, so nothing looks suspiciously empty.
+      Nobody is told it was hired.
+    </p>
+
+    <div class="shots">
+      <figure><img src="rules-img/black-market.jpg" alt="The black market window" loading="lazy"><figcaption>The black market, with security at the bottom.</figcaption></figure>
+      <figure><img src="rules-img/kidnap.jpg" alt="The kidnap action on a city card with a warning" loading="lazy"><figcaption>Kidnapping: name the ruler, and read the warning first.</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="rule" id="economy">
+    <span class="eyebrow">6 · Economy</span>
+    <h2>Harvest, prices and gold</h2>
+    <div class="flow">
+      <div class="row"><span class="k">🌱</span><div><strong>Base income.</strong> Every dawn your city gets +1 of each of its 3 resources, whatever the die says.</div></div>
+      <div class="row"><span class="k">🎲</span><div><strong>The d12.</strong> One 12-sided die is rolled. Every tile showing that number yields +2. Each number from 1 to 12 is equally likely, and a city's 3 tiles always have 3 different numbers.</div></div>
+      <div class="row"><span class="k">🏭</span><div><strong>Factories</strong> add +1 of their tile's resource every dawn.</div></div>
+      <div class="row"><span class="k">🤝</span><div><strong>Supply lines</strong> then share: if your partner produced a shared good this dawn, you get 1 too.</div></div>
+    </div>
+    <h3>Prices</h3>
+    <p class="prose">
+      Cards start at <span class="num">10</span> gold and prices are always whole numbers, so a sale pays exactly the listed price. Each night
+      prices move on <strong>relative</strong> supply and demand: a good gets cheaper only if it's more plentiful than the average good (harvested
+      or sold a lot), and dearer if it's scarcer (spent on recipes, smuggled or pumped). Moves are capped at 30% a night, and prices never drop
+      below 2.
+    </p>
+    <h3>Gold</h3>
+    <p class="prose">You start with 🪙 15. Gold comes from sales (and, for the Syndicate, ransoms). It pays for spies, travel, Tribunal entry, fines, tariffs and the Syndicate's tools, and will matter in War.</p>
+    <figure class="wide-shot"><img src="rules-img/paper.jpg" alt="The morning newspaper with a kidnapping headline, market moves and a private box" loading="lazy"><figcaption>The Janus Herald, which every player sees each morning: headlines by city, market moves, and a "for your eyes only" box with your harvest and private news.</figcaption></figure>
+  </section>
+
+  <section class="rule" id="tribunal">
+    <span class="eyebrow">7 · The Tribunal</span>
+    <h2>The Tribunal in detail</h2>
+    <p class="prose">From day 3, the table can try to expose someone. Taking part costs gold and accusing the wrong person costs more, so guessing is risky.</p>
+    <div class="flow">
+      <div class="row"><span class="k">🏛️</span><div><strong>Enter</strong> for 🪙 4, or stay out. It only sits at dusk if <strong>3 or more</strong> players entered; otherwise every fee is refunded.</div></div>
+      <div class="row"><span class="k">☝️</span><div><strong>Vote.</strong> Only entrants vote, for free, and can change their vote until dusk. Anyone can be accused, entrant or not.</div></div>
+      <div class="row"><span class="k">⚖️</span><div><strong>Verdict.</strong> A <strong>majority of entrants</strong> exposes the accused: their city is revealed, and by default their faction too. From then on they pay a 🚫 <strong>tariff</strong>: 🪙 5 on every trade and 25% less from sales.</div></div>
+      <div class="row"><span class="k">💸</span><div><strong>Wrong person?</strong> If the exposed player is innocent, everyone who accused them is fined <strong>🪙 8</strong>.</div></div>
+      <div class="row"><span class="k">🟡</span><div><strong>Veto.</strong> A Free Trader inside the Tribunal can secretly arm a veto (🪙 10, refunded if there's no verdict). It strikes down that day's verdict, and the news only says "a secret veto".</div></div>
+    </div>
+    <p class="prose small muted">Host setting: when creating a room, the host can choose to keep exposed players' <em>factions</em> secret, like Among Us's anonymous ejects. Their city is still revealed.</p>
+    <div class="shots">
+      <figure><img src="rules-img/tribunal.jpg" alt="The Tribunal window with three entrants and votes" loading="lazy"><figcaption>In session: 3 entrants, 2 votes needed.</figcaption></figure>
+      <figure><img src="rules-img/verdict.jpg" alt="The verdict screen exposing an innocent Concord player, with fines listed" loading="lazy"><figcaption>The verdict: an innocent exposed, and their accusers fined.</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="rule" id="clues">
+    <span class="eyebrow">8 · Deduction</span>
+    <h2>How identities leak</h2>
+    <div class="clues">
+      <div class="clue"><span class="ic">🔁</span><b>Who needs what</b><span>Envoys need 🌾 + 🐑. Whoever traded for Grain and Wool today probably sent tonight's envoy.</span></div>
+      <div class="clue"><span class="ic">🗺️</span><b>What a city makes</b><span>Each city's 3 resources are public. What someone gives away points to a few possible cities.</span></div>
+      <div class="clue"><span class="ic">🕵️</span><b>Spies vs. sales</b><span>"Rio received 44 gold" while its ruler only sold 34 in public: the extra gold came from somewhere.</span></div>
+      <div class="clue"><span class="ic">🃏</span><b>Card counts</b><span>Public counts show who's hoarding. They only update at dawn and after public deals.</span></div>
+      <div class="clue"><span class="ic">📈</span><b>Market moves</b><span>Only the Syndicate can pump prices. A spike nobody can explain is a clue.</span></div>
+      <div class="clue"><span class="ic">🏭</span><b>Factories and lines</b><span>Both show on the map. Whoever suddenly has spare Silk might rule the city with the Silk factory.</span></div>
+      <div class="clue"><span class="ic">✉️</span><b>Accepted envoys</b><span>Accepting an envoy tells you, and only you, who sent it.</span></div>
+      <div class="clue"><span class="ic">⚖️</span><b>The Tribunal and botched kidnaps</b><span>These reveal identities to everyone.</span></div>
+    </div>
+  </section>
+
+  <section class="rule" id="winning">
+    <span class="eyebrow">9 · Winning</span>
+    <h2>Winning</h2>
+    <div class="branches">
+      <div class="branch" style="border-left:5px solid var(--con)"><b style="color:var(--con)">🔵 Concord wins</b>the moment every Syndicate member has been exposed, whether by the Tribunal or a botched kidnapping.</div>
+      <div class="branch" style="border-left:5px solid var(--syn)"><b style="color:var(--syn)">🔴 Syndicate wins</b>if any of its members is still unexposed when round 6 ends.</div>
+    </div>
+    <p class="prose small muted">This is the current playtest win condition. War, planned next, will give the Syndicate an active way to win.</p>
+  </section>
+
+  <section class="rule" id="numbers">
+    <span class="eyebrow">10 · Reference</span>
+    <h2>Numbers cheat sheet</h2>
+    <div class="sheet">
+      <div><b>6</b><span>rounds; the Tribunal opens on day 3</span></div>
+      <div><b>15 / 10</b><span>starting gold / starting card price</span></div>
+      <div><b>+1 · +2</b><span>base income per resource · per d12 hit</span></div>
+      <div><b>4 · 2</b><span>max connections per city · supply lines per connection</span></div>
+      <div><b>7</b><span>supply lines for the Free Trader title</span></div>
+      <div><b>2 / hex</b><span>travel gold beyond 2 hexes</span></div>
+      <div><b>12</b><span>gold per spy report</span></div>
+      <div><b>4 · 8 · 10</b><span>Tribunal entry · innocent fine · veto</span></div>
+      <div><b>5 · 25%</b><span>tariff per trade · sale cut once exposed</span></div>
+      <div><b>15 · 5</b><span>kidnap cost · ransom per dawn</span></div>
+      <div><b>8 · 6</b><span>security · price pump</span></div>
+      <div><b>5 + ⛏️🔥</b><span>factory cost (of the tile's resource) for +1 a dawn</span></div>
+    </div>
+  </section>
+
+  <section class="rule" id="host">
+    <span class="eyebrow">11 · Playing</span>
+    <h2>Hosting a game</h2>
+    <div class="flow">
+      <div class="row"><span class="k">1</span><div>Open <a href="./" target="_blank" rel="noopener">the game</a>, choose <strong>Host a game</strong>, tick who's playing and choose whether the Tribunal reveals factions.</div></div>
+      <div class="row"><span class="k">2</span><div><strong>Create room</strong>, copy the invite link from the top bar, and paste it in Discord.</div></div>
+      <div class="row"><span class="k">3</span><div>Friends open the link and pick their name. The host's browser runs the game, so <strong>the host keeps that tab open</strong>.</div></div>
+      <div class="row"><span class="k">🧪</span><div><strong>Practice on one screen</strong> lets one person play every seat to learn the rules. There are sound effects for big moments (🔊 to mute) and a 🚪 quit button.</div></div>
+    </div>
+    <figure class="wide-shot"><img src="rules-img/home.jpg" alt="The home screen with Host, Join and Practice options" loading="lazy"><figcaption>The home screen.</figcaption></figure>
+  </section>
+
+  <!-- ===================================================== PART 2 -->
+  <div class="part" id="part2">
+    <span class="eyebrow">Part 2</span>
+    <h2>What changed so far</h2>
+    <p class="prose muted">The game went from an idea to this build over 19–20 October 2026, shaped by design calls and playtesting.</p>
+  </div>
+
+  <section class="rule" id="changelog">
+    <h3 style="margin-top:0">Changelog, in order</h3>
+    <div class="timeline">
+      <div class="entry">
+        <span class="when">19 Oct · v0.1</span>
+        <h3>First playable: the diplomacy loop</h3>
+        <ul>
+          <li>Hex map, harvests, day trading and the market, night envoys, trade links, spies, the morning news and the Tribunal.</li>
+          <li>Bot cities for small groups; rooms by invite link, hosted free on GitHub Pages with peer-to-peer play.</li>
+        </ul>
+        <p class="why">Started from the idea of Mafia meets Catan-style trading: everyone known at the table, nobody known on the board.</p>
+      </div>
+      <div class="entry">
+        <span class="when">19 Oct</span>
+        <h3>A simpler, visual interface</h3>
+        <ul>
+          <li>Map fills the screen; cards along the bottom; dice in the corner; menus behind icon buttons.</li>
+          <li>Full-screen morning newspaper for everyone; pop-ups for envoys and trade offers; first-visit how-to-play.</li>
+          <li>Your secret hidden behind a click, safe for Discord screen sharing.</li>
+        </ul>
+        <p class="why">The first version was too text-heavy to learn.</p>
+      </div>
+      <div class="entry">
+        <span class="when">19 Oct</span>
+        <h3>World cities, recipes and the black market</h3>
+        <ul>
+          <li>Animal nations became world cities.</li>
+          <li>Night actions need specific cards (🌾 + 🐑, 🪵 + 🪨), so <strong>trading becomes cover</strong> for what you do at night.</li>
+          <li>Black market (smuggle, pump prices), limits on connections, public card counts, sound effects, a quit button.</li>
+        </ul>
+        <p class="why">Before this, trading had no purpose because any cards paid for anything.</p>
+      </div>
+      <div class="entry">
+        <span class="when">19 Oct</span>
+        <h3>The Syndicate, treasury spies and fairer prices</h3>
+        <ul>
+          <li>Iron Pact renamed <strong>The Syndicate</strong>; the black market became Syndicate-only.</li>
+          <li>Spies read a city's gold instead of revealing its ruler, so identity comes from matching it to public sales.</li>
+          <li>Prices move relative to other goods; whole-number gold fixed sales paying less than the listed price.</li>
+          <li>Personas dropped in favour of player names; middle-mouse drag pans the map.</li>
+        </ul>
+      </div>
+      <div class="entry">
+        <span class="when">19 Oct</span>
+        <h3>Distance, the paid Tribunal and the Free Trader title</h3>
+        <ul>
+          <li>Far-away cities cost travel gold.</li>
+          <li>Tribunal: entry fee, needs 3 entrants, majority of entrants, fines for exposing an innocent, tariffs on the exposed, host setting for anonymous exposure.</li>
+          <li>Free Trader went from a faction to a <strong>secret title</strong> (7 supply lines) with a Tribunal veto.</li>
+        </ul>
+        <p class="why">An innocent exposure used to end the game; now it handicaps instead, and guessing costs gold.</p>
+      </div>
+      <div class="entry">
+        <span class="when">19 Oct</span>
+        <h3>One 12-sided die</h3>
+        <ul><li>Two six-sided dice replaced by one d12, so no city is stuck with unlikely numbers.</li></ul>
+      </div>
+      <div class="entry">
+        <span class="when">19 Oct</span>
+        <h3>Kidnapping and hired security</h3>
+        <ul>
+          <li>The Syndicate can kidnap a citizen for ransom; a wrong guess exposes them in the paper.</li>
+          <li>Spy reports show totals only; the Syndicate can hire security to hide illegal gold from spies.</li>
+          <li>Trade picker fixed so the cards you hold stay bright.</li>
+        </ul>
+        <p class="why">Gives everyone a reason to keep their city hidden instead of announcing it.</p>
+      </div>
+      <div class="entry">
+        <span class="when">19–20 Oct</span>
+        <h3>Supply lines, factories and secret readiness</h3>
+        <ul>
+          <li>"Trade routes" renamed <strong>supply lines</strong> to avoid confusion with day trades.</li>
+          <li>Factories on your own tiles: +1 of that resource every dawn, costing 5 of it plus Ore and Coal.</li>
+          <li>At night, only the number of ready players is shown.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="rule" id="questions">
+    <span class="eyebrow">Your input</span>
+    <h2>Open questions for playtesters</h2>
+    <p class="prose">These are undecided. Tell the group what you think about any of them.</p>
+    <ol class="questions">
+      <li><strong>Envoy reveals.</strong> Accepting an envoy tells you who sent it. Should identity come only from trading and the Tribunal instead?</li>
+      <li><strong>Ransom strength.</strong> 🪙 5 a dawn with no cap can bankrupt a player. Cap it, or limit how long it lasts?</li>
+      <li><strong>Factory model.</strong> +1 every dawn (current, pricier), or +1 only when the die hits that tile (cheaper)?</li>
+      <li><strong>Free Trader perks.</strong> Should the title do more than the veto: a discount, income, or counting toward a win?</li>
+      <li><strong>Three-player Tribunal.</strong> With 3 players, all three must enter, so anyone can block it. Is that okay?</li>
+      <li><strong>The first night.</strong> Do strict recipes leave people with nothing to do on night 1?</li>
+      <li><strong>A passive Syndicate.</strong> Until War, the Syndicate wins by staying hidden. Do they have enough to do?</li>
+    </ol>
+  </section>
+
+  <section class="rule" id="next">
+    <span class="eyebrow">Roadmap</span>
+    <h2>What's next</h2>
+    <div class="clues">
+      <div class="clue"><span class="ic">⚔️</span><b>War</b><span>Weapons, forts and attacks, with gold paying for armies. Gives the Syndicate an active way to win.</span></div>
+      <div class="clue"><span class="ic">🏳️</span><b>Nobody sits out</b><span>A conquered player becomes a government in exile: still in the game and still winning with their faction.</span></div>
+      <div class="clue"><span class="ic">⏲️</span><b>Quality of life</b><span>Phase timers, and reconnecting if the host's tab drops.</span></div>
+    </div>
+  </section>
+
+  <footer>
+    The World of Janus is a private game for friends. Code and full design notes: <a href="https://github.com/amalspradeep267/The-World-Of-Janus" target="_blank" rel="noopener">github.com/amalspradeep267/The-World-Of-Janus</a>.
+    Screenshots are from a practice game, so seats are named "Seat 1" to "Seat 4".
+  </footer>
+</div>
+
+<dialog id="lightbox" aria-label="Screenshot">
+  <img alt="">
+  <button type="button" id="lightbox-close">Close ✕</button>
+</dialog>
+
+<script>
+  (() => {
+    const box = document.getElementById('lightbox');
+    const big = box.querySelector('img');
+    document.querySelectorAll('figure img').forEach((img) => {
+      if (img.style.cursor === 'default') return;
+      img.tabIndex = 0;
+      const open = () => { big.src = img.src; big.alt = img.alt; box.showModal(); };
+      img.addEventListener('click', open);
+      img.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    });
+    document.getElementById('lightbox-close').addEventListener('click', () => box.close());
+    box.addEventListener('click', (e) => { if (e.target === box) box.close(); });
+  })();
+</script>
+
+</body>
+</html>

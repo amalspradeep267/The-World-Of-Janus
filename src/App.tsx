@@ -44,6 +44,9 @@ function Home() {
         <div className="mask">🎭</div>
         <h1>The World of Janus</h1>
         <p className="muted">Everyone knows who's at the table. Nobody knows who rules which city.</p>
+        <a className="rules-link" href="./rules.html" target="_blank" rel="noopener">
+          📖 Read the rules
+        </a>
       </div>
       <div className="home-grid">
         <div className="card">
