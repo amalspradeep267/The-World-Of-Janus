@@ -99,6 +99,7 @@ select, input { font: inherit; color: var(--text); background: var(--panel-2); b
   background: #12141a; color: var(--text); border: 1px solid var(--line); border-radius: 999px; font: 600 10px/14px var(--sans); padding: 0 5px;
 }
 .topbar .avatars { padding-bottom: 10px; }
+.avatar .tariff { position: absolute; left: -5px; top: -5px; font-size: 12px; line-height: 1; }
 
 .ready-btn { min-width: 150px; }
 .icon-btn { font-size: 18px; padding: 6px 8px; border-color: transparent; }
@@ -256,7 +257,7 @@ select, input { font: inherit; color: var(--text); background: var(--panel-2); b
 .reveal { text-align: center; }
 .reveal .seal { font-size: 80px; width: 130px; height: 130px; margin: 6px auto 12px; border-radius: 50%; background: #10131c; border: 3px solid var(--gold); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 40px var(--gold-soft); }
 .faction-tag { display: inline-block; padding: 4px 14px; border-radius: 999px; font-family: var(--serif); font-weight: 700; margin-bottom: 10px; }
-.faction-pact { background: #5a1f1f; color: #ffb3b3; }
+.faction-syndicate { background: #5a1f1f; color: #ffb3b3; }
 .faction-concord { background: #1f3f5a; color: #b3dcff; }
 .faction-trader { background: #4a3d16; color: #ffe4a3; }
 

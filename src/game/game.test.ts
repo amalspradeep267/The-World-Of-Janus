@@ -1,7 +1,7 @@
 import { Client } from 'boardgame.io/client';
 import { Local } from 'boardgame.io/multiplayer';
 import { describe, expect, it } from 'vitest';
-import { MAX_GOODS_PER_ROUTE, MAX_ROUNDS, MAX_ROUTES_PER_CITY, PUMP, RECIPE, RESOURCES, SETUP_TABLE, type Resource } from './constants';
+import { COST, MAX_GOODS_PER_ROUTE, MAX_ROUNDS, MAX_ROUTES_PER_CITY, PUMP, RECIPE, RESOURCES, SETUP_TABLE, TARIFF, type Resource } from './constants';
 import { findRoute, handTotal, hasGoods, makeGame, routeCount, smugglePrice } from './game';
 import type { GState, Hand } from './types';
 
@@ -100,24 +100,88 @@ describe('The World of Janus', () => {
     }
   });
 
-  it('smuggles cards for gold and pumps prices at night', () => {
-    const clients = startMatch(3);
+  it('lets only the Syndicate smuggle and pump', () => {
+    const clients = startMatch(4);
     allReady(clients); // -> night 1
-    const G = view(clients[0]);
+    const views = clients.map((c, i) => view(c).players[String(i)]);
+    const s = views.findIndex((p) => p.faction === 'syndicate');
+    const other = views.findIndex((p) => p.faction !== 'syndicate');
+    clients[other].moves.planSmuggle('ore');
+    clients[other].moves.planPump('silk');
+    expect(view(clients[other]).players[String(other)].plans).toHaveLength(0);
+
+    const G = view(clients[s]);
     const price = smugglePrice(G, 'ore');
-    const goldBefore = G.players['0'].gold;
-    const oreBefore = G.players['0'].hand.ore;
-    const silkBefore = G.prices.silk;
-    clients[0].moves.planSmuggle('ore');
-    expect(view(clients[0]).players['0'].gold).toBe(goldBefore - price);
-    const gold1 = view(clients[1]).players['1'].gold;
-    clients[1].moves.planPump('silk');
-    expect(view(clients[1]).players['1'].gold).toBe(gold1 - PUMP.gold); // paid up front
-    allReady(clients); // -> day 2: delivery + market move
-    const after = view(clients[0]);
-    expect(after.players['0'].hand.ore).toBeGreaterThanOrEqual(oreBefore + 1);
-    expect(after.prices.silk).toBeGreaterThan(silkBefore);
-    expect(after.priceChange.silk).toBeGreaterThanOrEqual(PUMP.units * 8 - 8);
+    const gold = G.players[String(s)].gold;
+    const ore = G.players[String(s)].hand.ore;
+    clients[s].moves.planSmuggle('ore');
+    expect(view(clients[s]).players[String(s)].gold).toBe(gold - price);
+    if (view(clients[s]).players[String(s)].gold >= PUMP.gold) clients[s].moves.planPump('silk');
+    allReady(clients); // -> day 2: delivery
+    expect(view(clients[s]).players[String(s)].hand.ore).toBeGreaterThanOrEqual(ore + 1);
+  });
+
+  it('moves prices relative to each other, not all down together', () => {
+    const clients = startMatch(5);
+    allReady(clients); // -> night 1
+    allReady(clients); // -> day 2, after one market update
+    const G = view(clients[0]);
+    const changes = Object.values(G.priceChange);
+    const allDown = changes.length === RESOURCES.length && changes.every((c) => c! < 0);
+    const allUp = changes.length === RESOURCES.length && changes.every((c) => c! > 0);
+    expect(allDown || allUp).toBe(false);
+    for (const r of RESOURCES) expect(Number.isInteger(G.prices[r])).toBe(true);
+  });
+
+  it('pays exactly the listed price for a sale', () => {
+    const clients = startMatch(3);
+    const G = view(clients[0]);
+    const r = RESOURCES.find((x) => G.players['0'].hand[x] > 0)!;
+    const before = G.players['0'].gold;
+    clients[0].moves.sell(r, 1);
+    expect(view(clients[0]).players['0'].gold).toBe(before + G.prices[r]);
+  });
+
+  it('spies report a treasury, not an identity', () => {
+    const clients = startMatch(3);
+    // Player 1 sells a card by day, then player 0 spies on player 1's city at night.
+    const G1 = view(clients[1]);
+    const r = RESOURCES.find((x) => G1.players['1'].hand[x] > 0)!;
+    const earned = G1.prices[r];
+    clients[1].moves.sell(r, 1);
+    allReady(clients); // -> night 1
+    const target = view(clients[1]).players['1'].nation;
+    clients[0].moves.planSpy(target);
+    allReady(clients); // -> day 2
+    const me = view(clients[0]).players['0'];
+    const report = me.inbox.find((m) => m.text.startsWith('🕵️'))!;
+    expect(report.text).toContain(`received ${earned} gold from 1 sale`);
+    expect(me.known[target]).toBeUndefined(); // no identity leak
+    expect(me.gold).toBeLessThanOrEqual(15 - COST.spyGold);
+  });
+
+  it('puts a tariff on an exposed innocent instead of ending the game', () => {
+    const clients = startMatch(4);
+    const factions = clients.map((c, i) => view(c).players[String(i)].faction);
+    const innocent = factions.findIndex((f) => f !== 'syndicate');
+    for (let k = 0; k < 4; k++) allReady(clients); // reach day 3, when the Tribunal opens
+    expect(view(clients[0]).round).toBe(3);
+    clients.forEach((c, i) => i !== innocent && c.moves.vote(String(innocent)));
+    allReady(clients); // dusk: verdict
+    expect(view(clients[0]).tariffed[String(innocent)]).toBe(true);
+    expect(clients[0].getState()!.ctx.gameover).toBeFalsy();
+
+    // Their next trade costs them the tariff.
+    allReady(clients); // -> day 4
+    const partner = (innocent + 1) % 4;
+    const mine = view(clients[innocent]).players[String(innocent)];
+    const theirs = view(clients[partner]).players[String(partner)];
+    const give = RESOURCES.find((r) => mine.hand[r] > 0)!;
+    const get = RESOURCES.find((r) => theirs.hand[r] > 0)!;
+    clients[innocent].moves.proposeTrade(String(partner), { [give]: 1 }, { [get]: 1 });
+    const offer = view(clients[partner]).trades.find((t) => t.from === String(innocent))!;
+    clients[partner].moves.respondTrade(offer.id, true);
+    expect(view(clients[innocent]).players[String(innocent)].gold).toBe(mine.gold - TARIFF.tradeGold);
   });
 
   it('freezes public card counts during the night', () => {
@@ -150,7 +214,7 @@ describe('The World of Janus', () => {
       clients[receiverIdx].moves.respondEnvoy(envoy!.id, true);
       expect(view(clients[receiverIdx]).owners[mine]).toBe(String(senderIdx));
       const watcher = view(clients[watcherIdx]).players[String(watcherIdx)];
-      if (watcher.faction !== 'pact') expect(view(clients[watcherIdx]).owners[mine]).toBeUndefined();
+      if (watcher.faction !== 'syndicate') expect(view(clients[watcherIdx]).owners[mine]).toBeUndefined();
       return;
     }
     throw new Error('no match produced an affordable envoy');

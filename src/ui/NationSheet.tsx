@@ -11,7 +11,7 @@ import {
 } from '../game/constants';
 import { findRoute, routeCount } from '../game/game';
 import type { GState, PlayerSecret } from '../game/types';
-import { Avatar, personaOf, Recipe, ResPill, missingFor } from './common';
+import { Avatar, playerOf, Recipe, ResPill, missingFor } from './common';
 
 interface Props {
   G: GState;
@@ -23,9 +23,9 @@ interface Props {
   onClose: () => void;
 }
 
-type Mode = null | 'trade' | 'spy';
+type Mode = null | 'trade';
 
-export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: Props) {
+export function NationSheet({ G, phase, me, nation, moves, onClose }: Props) {
   const [mode, setMode] = useState<Mode>(null);
   useEffect(() => setMode(null), [nation, phase]);
 
@@ -39,6 +39,7 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
   const plannedEnvoy = me.plans.some((p) => p.kind === 'envoy' && p.to === nation);
   const plannedEnvoys = me.plans.filter((p) => p.kind === 'envoy').length;
   const atRouteCap = routeCount(G, me.nation) + plannedEnvoys >= MAX_ROUTES_PER_CITY;
+  const canSmuggle = me.faction === 'syndicate';
   const envoyMissing = missingFor(me.hand, RECIPE.envoy);
   const routeMissing = missingFor(me.hand, RECIPE.route);
   const plannedGoods = me.plans.filter((p) => p.kind === 'route' && p.with === nation).length;
@@ -54,12 +55,12 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
     : atRouteCap
       ? `You already have ${MAX_ROUTES_PER_CITY} connections (the maximum).`
       : envoyMissing.length
-        ? `Missing ${envoyMissing.map((r) => RESOURCE_INFO[r].emoji).join(' ')}: trade for it by day or 🕶️ smuggle it.`
+        ? `Missing ${envoyMissing.map((r) => RESOURCE_INFO[r].emoji).join(' ')}: trade for it by day${canSmuggle ? ' or 🕶️ smuggle it' : ''}.`
         : null;
   const routeBlock = goodsFull
     ? `This connection already carries ${MAX_GOODS_PER_ROUTE} goods (the maximum).`
     : routeMissing.length
-      ? `Missing ${routeMissing.map((r) => RESOURCE_INFO[r].emoji).join(' ')}: trade for it by day or 🕶️ smuggle it.`
+      ? `Missing ${routeMissing.map((r) => RESOURCE_INFO[r].emoji).join(' ')}: trade for it by day${canSmuggle ? ' or 🕶️ smuggle it' : ''}.`
       : tradeable.length === 0
         ? 'Every good between you is already traded.'
         : null;
@@ -72,7 +73,7 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
     <span className="muted small">Ruler: nobody (bot)</span>
   ) : (
     <span className="row small">
-      <Avatar persona={personaOf(G, owner).persona} size={20} /> {personaOf(G, owner).persona}
+      <Avatar name={playerOf(G, owner).name} size={20} /> {playerOf(G, owner).name}
     </span>
   );
 
@@ -105,7 +106,7 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
 
       {mine ? (
         <p className="small muted" style={{ marginTop: 12 }}>
-          You serve the <b>{FACTION_INFO[me.faction].label}</b>. Nobody else knows this city is yours.
+          Your faction: <b>{FACTION_INFO[me.faction].label}</b>. Nobody else knows this city is yours.
         </p>
       ) : phase === 'day' ? (
         <p className="small muted" style={{ marginTop: 12 }}>🌙 You can act on this city at night.</p>
@@ -148,33 +149,22 @@ export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: 
             </div>
           )}
 
-          <button className={`action ${mode === 'spy' ? 'chosen' : ''}`} disabled={me.gold < COST.spyGold} onClick={() => setMode(mode === 'spy' ? null : 'spy')}>
+          <button
+            className="action"
+            disabled={me.gold < COST.spyGold || me.plans.some((p) => p.kind === 'spy' && p.nation === nation)}
+            onClick={() => moves.planSpy(nation)}
+          >
             <span className="ai">🕵️</span>
             <span>
-              <b>Send spies</b>
-              <span>{me.gold < COST.spyGold ? `Needs ${COST.spyGold} gold. Sell cards at the 💰 market by day.` : 'Ask: is this city ruled by…?'}</span>
+              <b>{me.plans.some((p) => p.kind === 'spy' && p.nation === nation) ? 'Spies sent ✓' : 'Spy on its treasury'}</b>
+              <span>
+                {me.gold < COST.spyGold
+                  ? `Needs ${COST.spyGold} gold. Sell cards at the 💰 market by day.`
+                  : 'Learn how much gold this city earned from sales and spent this round. Match it to the public sales.'}
+              </span>
             </span>
             <span className="cost">🪙{COST.spyGold}</span>
           </button>
-          {mode === 'spy' && (
-            <div className="pick-grid" style={{ marginTop: 8 }}>
-              {G.roster
-                .filter((p) => p.id !== playerID)
-                .map((p) => (
-                  <div
-                    key={p.id}
-                    className="pickable"
-                    onClick={() => {
-                      moves.planSpy(nation, p.id);
-                      setMode(null);
-                    }}
-                  >
-                    <Avatar persona={p.persona} />
-                    <small>{p.persona}</small>
-                  </div>
-                ))}
-            </div>
-          )}
         </>
       )}
     </div>

@@ -1,29 +1,40 @@
 import type { ReactNode } from 'react';
-import { PERSONAS, RESOURCES, RESOURCE_INFO, type NationId, type Resource } from '../game/constants';
+import { RESOURCES, RESOURCE_INFO, type NationId, type Resource } from '../game/constants';
 import type { GState, Hand } from '../game/types';
 
 // ---------- people ----------
 
 const AVATAR_COLORS = ['#e3b04b', '#7fc4e8', '#e88f7f', '#9fd18b', '#c79be6', '#f0c27f', '#7fe0c9', '#e87fb0', '#b9c27f', '#8fa2ff'];
 
-export const personaOf = (G: GState, id: string) => G.roster.find((p) => p.id === id)!;
+export const playerOf = (G: GState, id: string) => G.roster.find((p) => p.id === id)!;
 
-export function Avatar({ persona, size = 34, ready, title, cards }: { persona: string; size?: number; ready?: boolean; title?: string; cards?: number }) {
-  const i = Math.max(0, PERSONAS.indexOf(persona));
-  const initials = persona
-    .split(' ')
-    .filter((w) => w[0] === w[0].toUpperCase() && w !== 'the')
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join('');
+export function Avatar({
+  name,
+  size = 34,
+  ready,
+  title,
+  cards,
+  tariffed,
+}: {
+  name: string;
+  size?: number;
+  ready?: boolean;
+  title?: string;
+  cards?: number;
+  tariffed?: boolean;
+}) {
+  const hash = [...name].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
+  const words = name.match(/[A-Z]?[a-z0-9]+|[A-Z]+(?![a-z])/g) ?? [name];
+  const initials = (words.length > 1 ? words[0][0] + words[1][0] : name.slice(0, 2)).toUpperCase();
   return (
     <span
       className={`avatar ${ready === false ? 'waiting' : ''}`}
-      style={{ width: size, height: size, fontSize: size * 0.38, background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
-      title={title ?? persona}
+      style={{ width: size, height: size, fontSize: size * 0.38, background: AVATAR_COLORS[hash % AVATAR_COLORS.length] }}
+      title={title ?? name}
     >
       {initials}
       {ready && <span className="tick">✓</span>}
+      {tariffed && <span className="tariff" title="Exposed by the Tribunal: pays a tariff on trades">🚫</span>}
       {cards !== undefined && <span className="cards" title="Cards in hand (updated at dawn and after public deals)">🃏{cards}</span>}
     </span>
   );

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { RESOURCE_INFO, type NationId } from '../game/constants';
 import type { GState } from '../game/types';
 
@@ -35,9 +36,46 @@ export function HexMap({ G, myNation, selected, onSelect }: Props) {
   const xs = pts.map((p) => p.x);
   const ys = pts.map((p) => p.y);
   const pad = SIZE * 1.6;
-  const viewBox = `${Math.min(...xs) - pad} ${Math.min(...ys) - pad} ${Math.max(...xs) - Math.min(...xs) + pad * 2} ${
-    Math.max(...ys) - Math.min(...ys) + pad * 2
-  }`;
+  const width = Math.max(...xs) - Math.min(...xs) + pad * 2;
+  const height = Math.max(...ys) - Math.min(...ys) + pad * 2;
+
+  // Middle-mouse drag pans the map (no zoom). Pan is in map units, kept within half a map of centre.
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const drag = useRef<{ x: number; y: number; px: number; py: number; scale: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    const move = (e: MouseEvent) => {
+      const d = drag.current;
+      if (!d) return;
+      const clamp = (v: number, lim: number) => Math.max(-lim, Math.min(lim, v));
+      setPan({
+        x: clamp(d.px + (e.clientX - d.x) / d.scale, width / 2),
+        y: clamp(d.py + (e.clientY - d.y) / d.scale, height / 2),
+      });
+    };
+    const up = (e: MouseEvent) => {
+      if (e.button === 1 && drag.current) {
+        drag.current = null;
+        setDragging(false);
+      }
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    return () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+  }, [width, height]);
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 1) return;
+    e.preventDefault(); // stops the browser's middle-click autoscroll
+    const scale = svgRef.current?.getScreenCTM()?.a || 1;
+    drag.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y, scale };
+    setDragging(true);
+  };
+
+  const viewBox = `${Math.min(...xs) - pad - pan.x} ${Math.min(...ys) - pad - pan.y} ${width} ${height}`;
   const capital = (n: NationId) => pts[G.nations[n]!.tiles[0]];
 
   const ownerLabel = (n: NationId) => {
@@ -45,11 +83,20 @@ export function HexMap({ G, myNation, selected, onSelect }: Props) {
     const o = G.owners[n];
     if (o === undefined) return null;
     if (o === 'bot') return 'No ruler';
-    return G.roster.find((p) => p.id === o)?.persona ?? null;
+    return G.roster.find((p) => p.id === o)?.name ?? null;
   };
 
   return (
-    <svg viewBox={viewBox} role="img" aria-label="Continent map" onClick={() => onSelect(null)}>
+    <svg
+      ref={svgRef}
+      viewBox={viewBox}
+      role="img"
+      aria-label="Continent map (drag with the middle mouse button to pan)"
+      onClick={() => onSelect(null)}
+      onMouseDown={onMouseDown}
+      onAuxClick={(e) => e.button === 1 && e.preventDefault()}
+      style={{ cursor: dragging ? 'grabbing' : undefined }}
+    >
       <defs>
         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="4" result="b" />

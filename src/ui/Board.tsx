@@ -3,7 +3,7 @@ import type { BoardProps } from 'boardgame.io/react';
 import { COST, FACTION_INFO, MAX_ROUNDS, MAX_ROUTES_PER_CITY, RECIPE, RESOURCES, RESOURCE_INFO, TRIBUNAL_FROM_ROUND, type NationId } from '../game/constants';
 import { routeCount } from '../game/game';
 import type { GState } from '../game/types';
-import { Avatar, Die, GoldCard, goodsEmoji, Modal, nationIcon, nationName, personaOf, Recipe, ResCard } from './common';
+import { Avatar, Die, GoldCard, goodsEmoji, Modal, nationIcon, nationName, playerOf, Recipe, ResCard } from './common';
 import { HexMap } from './HexMap';
 import { BlackMarketModal, IdentityModal, MarketModal, NewsArchive, PlayersModal, TradeModal, TribunalModal, Welcome } from './Modals';
 import { NationSheet } from './NationSheet';
@@ -56,7 +56,7 @@ export function Board(props: BoardProps<GState>) {
   const prev = useRef<{ phase: string; round: number; envoys: number; offers: number; log: number; plans: number; verdicts: number; over: boolean } | null>(null);
   useEffect(() => {
     if (!me) return;
-    const persona = G.roster.find((p) => p.id === playerID)?.persona ?? '';
+    const myName = G.roster.find((p) => p.id === playerID)?.name ?? '';
     const now = {
       phase,
       round: G.round,
@@ -81,7 +81,7 @@ export function Board(props: BoardProps<GState>) {
     if (now.offers > was.offers) sfx('offer');
     if (now.plans > was.plans) sfx('order');
     // A trade or sale you were part of just went through.
-    if (now.log > was.log && G.publicLog.slice(was.log).some((l) => l.text.includes(persona) && !l.text.startsWith('⚖️'))) sfx('coin');
+    if (now.log > was.log && G.publicLog.slice(was.log).some((l) => l.text.includes(myName) && !l.text.startsWith('⚖️'))) sfx('coin');
   });
 
   useEffect(() => {
@@ -110,7 +110,7 @@ export function Board(props: BoardProps<GState>) {
   const tools: { id: Panel; icon: string; label: string; show: boolean; disabled?: boolean; badge?: number; title?: string }[] = [
     { id: 'trade', icon: '🔁', label: 'Trade', show: phase === 'day' },
     { id: 'market', icon: '💰', label: 'Market', show: phase === 'day' },
-    { id: 'black', icon: '🕶️', label: 'Black mkt', show: phase === 'night' },
+    { id: 'black', icon: '🕶️', label: 'Black mkt', show: phase === 'night' && me.faction === 'syndicate' },
     {
       id: 'tribunal',
       icon: '⚖️',
@@ -151,10 +151,11 @@ export function Board(props: BoardProps<GState>) {
           {G.roster.map((p) => (
             <Avatar
               key={p.id}
-              persona={p.persona}
+              name={p.name}
               ready={!!G.ready[p.id]}
               cards={G.handSizes[p.id]}
-              title={`${p.persona} (${p.name}) · ${G.handSizes[p.id] ?? 0} cards${G.ready[p.id] ? ' · ready' : ''}`}
+              tariffed={G.tariffed[p.id]}
+              title={`${p.name} · ${G.handSizes[p.id] ?? 0} cards${G.tariffed[p.id] ? ' · tariffed' : ''}${G.ready[p.id] ? ' · ready' : ''}`}
             />
           ))}
         </div>
@@ -183,8 +184,8 @@ export function Board(props: BoardProps<GState>) {
         <div className="identity-badge" onClick={(e) => { e.stopPropagation(); setPanel('identity'); }} title="Click to see your secret">
           <span className="nicon">🎭</span>
           <span>
-            <b>{personaOf(G, playerID!).persona}</b>
-            <span>🔒 Click to see your secret</span>
+            <b>{playerOf(G, playerID!).name}</b>
+            <span>🔒 Click to see your secret{G.tariffed[playerID!] ? ' · 🚫 tariffed' : ''}</span>
           </span>
         </div>
 
@@ -209,9 +210,9 @@ export function Board(props: BoardProps<GState>) {
           })}
           {incomingTrades.map((t) => (
             <div key={t.id} className="toast">
-              <Avatar persona={personaOf(G, t.from).persona} />
+              <Avatar name={playerOf(G, t.from).name} />
               <span className="tt">
-                <b>{personaOf(G, t.from).persona}</b> offers <span style={{ fontSize: 16 }}>{goodsEmoji(t.give)}</span> for{' '}
+                <b>{playerOf(G, t.from).name}</b> offers <span style={{ fontSize: 16 }}>{goodsEmoji(t.give)}</span> for{' '}
                 <span style={{ fontSize: 16 }}>{goodsEmoji(t.get)}</span>
               </span>
               <button className="good tiny" onClick={() => moves.respondTrade(t.id, true)}>Accept</button>
@@ -271,7 +272,7 @@ export function Board(props: BoardProps<GState>) {
             <span key={i} className="order">
               {p.kind === 'envoy' && <>✉️ Envoy ➜ {nationIcon(G, p.to)}</>}
               {p.kind === 'route' && <>🤝 {RESOURCE_INFO[p.good].emoji} trade ➜ {nationIcon(G, p.with)}</>}
-              {p.kind === 'spy' && <>🕵️ {nationIcon(G, p.nation)} = <Avatar persona={personaOf(G, p.suspect).persona} size={20} />?</>}
+              {p.kind === 'spy' && <>🕵️ Spy on {nationIcon(G, p.nation)}'s treasury</>}
               {p.kind === 'smuggle' && <>🕶️ Smuggle {RESOURCE_INFO[p.good].emoji}</>}
               {p.kind === 'pump' && <>🕶️ Pump {RESOURCE_INFO[p.good].emoji} ▲</>}
               <button className="tiny ghost" onClick={() => moves.cancelPlan(i)} title="Cancel and get your cards back">✕</button>
@@ -281,7 +282,7 @@ export function Board(props: BoardProps<GState>) {
       </footer>
 
       {panel === 'trade' && <TradeModal G={G} me={me} playerID={playerID!} moves={moves} onClose={() => setPanel(null)} />}
-      {panel === 'market' && <MarketModal G={G} me={me} moves={moves} onClose={() => setPanel(null)} />}
+      {panel === 'market' && <MarketModal G={G} me={me} playerID={playerID!} moves={moves} onClose={() => setPanel(null)} />}
       {panel === 'black' && <BlackMarketModal G={G} me={me} moves={moves} onClose={() => setPanel(null)} />}
       {panel === 'tribunal' && <TribunalModal G={G} playerID={playerID!} moves={moves} onClose={() => setPanel(null)} />}
       {panel === 'identity' && <IdentityModal G={G} me={me} onClose={() => setPanel(null)} />}
@@ -327,12 +328,12 @@ export function Board(props: BoardProps<GState>) {
               {me.known[reveal] === 'bot' ? (
                 <span style={{ fontSize: 52 }}>🤖</span>
               ) : (
-                <Avatar persona={personaOf(G, me.known[reveal]!).persona} size={80} />
+                <Avatar name={playerOf(G, me.known[reveal]!).name} size={80} />
               )}
             </div>
             <h2>
               {nationName(G, reveal)} is ruled by{' '}
-              {me.known[reveal] === 'bot' ? 'nobody (a bot city)' : personaOf(G, me.known[reveal]!).persona}
+              {me.known[reveal] === 'bot' ? 'nobody (a bot city)' : playerOf(G, me.known[reveal]!).name}
             </h2>
             <p className="muted small">Only you know this. It's saved under 🎭 your secret.</p>
             <button className="primary" onClick={() => setRevealQueue((q) => q.slice(1))}>Got it</button>
@@ -375,8 +376,8 @@ function Result({ G, playerID }: { G: GState; playerID: string }) {
             const s = G.players[p.id];
             return (
               <div key={p.id} className="pickable" style={{ cursor: 'default', minWidth: 110 }}>
-                <Avatar persona={p.persona} size={44} />
-                <b className="small">{p.persona}</b>
+                <Avatar name={p.name} size={44} />
+                <b className="small">{p.name}</b>
                 <span style={{ fontSize: 26 }}>{nationIcon(G, s.nation)}</span>
                 <span className={`faction-tag faction-${s.faction} small`} style={{ margin: 0 }}>{FACTION_INFO[s.faction].label}</span>
               </div>

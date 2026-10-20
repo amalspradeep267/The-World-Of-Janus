@@ -25,35 +25,22 @@ export const NATIONS = [
 ] as const;
 export type NationId = (typeof NATIONS)[number]['id'];
 
-export const PERSONAS = [
-  'Napoleon',
-  'Cleopatra',
-  'Genghis Khan',
-  'Elizabeth I',
-  'Julius Caesar',
-  'Joan of Arc',
-  'Ashoka',
-  'Catherine the Great',
-  'Saladin',
-  'Wu Zetian',
-];
-
-export type Faction = 'pact' | 'concord' | 'trader';
+export type Faction = 'syndicate' | 'concord' | 'trader';
 
 export const TRADER_GOAL = 4;
 /** The Tribunal opens on this round. */
 export const TRIBUNAL_FROM_ROUND = 3;
-/** Exposing this many non-Pact players ends the game in a Pact win. */
-export const WRONG_EXPOSURES_TO_LOSE = 1;
+/** Anyone the Tribunal exposes pays this on every trade, and earns less at the market. */
+export const TARIFF = { tradeGold: 5, saleCut: 0.25 };
 
 export const FACTION_INFO: Record<Faction, { label: string; goal: string }> = {
-  pact: {
-    label: 'Iron Pact',
-    goal: 'Stay hidden. You win if any Pact player is still unexposed at the end, or if the Tribunal ever exposes an innocent.',
+  syndicate: {
+    label: 'The Syndicate',
+    goal: 'Stay hidden. You win if any Syndicate member is still unexposed at the end. Only you can use the black market.',
   },
   concord: {
     label: 'Concord',
-    goal: 'Find the Iron Pact. Expose every Pact player at the Tribunal, without ever exposing an innocent.',
+    goal: 'Find the Syndicate. Expose every Syndicate member at the Tribunal before the game ends.',
   },
   trader: {
     label: 'Free Trader',
@@ -62,13 +49,13 @@ export const FACTION_INFO: Record<Faction, { label: string; goal: string }> = {
 };
 
 /** Faction counts and map size per player count. Bot nations fill the rest of the map. */
-export const SETUP_TABLE: Record<number, { pact: number; trader: number; nations: number; concordPairs: number }> = {
-  3: { pact: 1, trader: 0, nations: 6, concordPairs: 0 },
-  4: { pact: 1, trader: 1, nations: 6, concordPairs: 0 },
-  5: { pact: 1, trader: 1, nations: 7, concordPairs: 1 },
-  6: { pact: 2, trader: 1, nations: 7, concordPairs: 1 },
-  7: { pact: 2, trader: 1, nations: 8, concordPairs: 1 },
-  8: { pact: 2, trader: 1, nations: 8, concordPairs: 2 },
+export const SETUP_TABLE: Record<number, { syndicate: number; trader: number; nations: number; concordPairs: number }> = {
+  3: { syndicate: 1, trader: 0, nations: 6, concordPairs: 0 },
+  4: { syndicate: 1, trader: 1, nations: 6, concordPairs: 0 },
+  5: { syndicate: 1, trader: 1, nations: 7, concordPairs: 1 },
+  6: { syndicate: 2, trader: 1, nations: 7, concordPairs: 1 },
+  7: { syndicate: 2, trader: 1, nations: 8, concordPairs: 1 },
+  8: { syndicate: 2, trader: 1, nations: 8, concordPairs: 2 },
 };
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 8;
@@ -84,8 +71,10 @@ export const DICE_YIELD = 2;
 export const BASE_INCOME = 1;
 
 export const START_EACH = 2;
-export const START_GOLD = 5;
-export const START_PRICE = 3;
+// Prices and gold are whole numbers on a 10-per-card scale, so sales pay exactly the listed price.
+export const START_GOLD = 15;
+export const START_PRICE = 10;
+export const MIN_PRICE = 2;
 
 /**
  * Night action recipes. Each city produces only 3 of the 7 resources, so most
@@ -95,12 +84,13 @@ export const RECIPE: Record<'envoy' | 'route', Partial<Record<Resource, number>>
   envoy: { grain: 1, wool: 1 },
   route: { timber: 1, stone: 1 },
 };
-export const COST = { spyGold: 4 };
+/** Spies report one city's treasury for the round: gold earned from sales, and gold spent. */
+export const COST = { spyGold: 12 };
 
-/** Black market (night): buy a card at the market price times this markup, rounded up. */
+/** Black market (night, Syndicate only): buy a card at the market price times this markup, rounded up. */
 export const SMUGGLE_MARKUP = 1.5;
-/** Black market (night): pay this much gold to fake this many units of demand for a resource. */
-export const PUMP = { gold: 2, units: 3 };
+/** Black market (night, Syndicate only): pay this much gold to fake this many units of demand. */
+export const PUMP = { gold: 6, units: 4 };
 
 /** Trade route limits. */
 export const MAX_GOODS_PER_ROUTE = 2;
@@ -109,7 +99,13 @@ export const MAX_ROUTES_PER_CITY = 3;
 /** Bot behaviour per night. */
 export const BOT = { envoyChance: 0.45, routeChance: 0.35, acceptChance: 0.6 };
 
-/** Price change per unit of net demand (spent at night minus sold by day), in percent. */
-export const PRICE_STEP_PCT = 8;
+/**
+ * Prices move on relative supply and demand. Each resource's imbalance
+ * (demand minus SUPPLY_WEIGHT x supply) is compared with the average across all
+ * resources, so only goods that are scarcer or more plentiful than the rest move.
+ * Supply = units harvested + units sold. Demand = units spent on recipes, smuggled or pumped.
+ */
+export const SUPPLY_WEIGHT = 0.5;
+export const PRICE_STEP_PCT = 6;
 export const PRICE_CAP_PCT = 30;
 

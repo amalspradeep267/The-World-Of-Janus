@@ -1,6 +1,6 @@
 import { FACTION_INFO, RESOURCES, RESOURCE_INFO, type NationId } from '../game/constants';
 import type { GState, NewsItem, PlayerSecret } from '../game/types';
-import { Avatar, Die, nationIcon, nationName, personaOf, ResCard } from './common';
+import { Avatar, Die, nationIcon, nationName, playerOf, ResCard } from './common';
 
 function Nat({ G, n }: { G: GState; n: NationId }) {
   return (
@@ -46,7 +46,7 @@ function Headline({ G, item }: { G: GState; item: NewsItem }) {
           </span>
           <span className="cap">
             Spies spotted
-            <em>Someone is asking who rules {nationName(G, item.nation)}</em>
+            <em>Someone went through {nationName(G, item.nation)}'s treasury</em>
           </span>
         </div>
       );
@@ -105,7 +105,7 @@ export function MorningPaper({ G, me, onClose }: { G: GState; me: PlayerSecret; 
               ))}
             </div>
             <p className="small" style={{ marginTop: 6, fontStyle: 'italic' }}>
-              Prices rise when a good is spent at night, and fall when it's sold by day.
+              Prices move with supply and demand compared with other goods: plentiful or heavily sold goods get cheaper, scarce or sought-after ones get dearer.
             </p>
           </>
         )}
@@ -146,7 +146,7 @@ export function MorningPaper({ G, me, onClose }: { G: GState; me: PlayerSecret; 
 
 export function VerdictOverlay({ G, onClose }: { G: GState; onClose: () => void }) {
   const v = G.verdicts[G.verdicts.length - 1];
-  const target = v.target != null ? personaOf(G, v.target) : null;
+  const target = v.target != null ? playerOf(G, v.target) : null;
   const rev = v.target != null ? G.revealed[v.target] : null;
   return (
     <div className="overlay" onClick={onClose}>
@@ -155,16 +155,16 @@ export function VerdictOverlay({ G, onClose }: { G: GState; onClose: () => void 
         {target && rev ? (
           <>
             <div className="center" style={{ gap: 18, margin: '18px 0' }}>
-              <Avatar persona={target.persona} size={70} />
+              <Avatar name={target.name} size={70} />
               <span style={{ fontSize: 30 }}>=</span>
               <div className="seal" style={{ width: 90, height: 90, fontSize: 52, margin: 0 }}>
                 {nationIcon(G, rev.nation)}
               </div>
             </div>
-            <h2>{target.persona} is exposed</h2>
+            <h2>{target.name} is exposed</h2>
             <span className={`faction-tag faction-${rev.faction}`}>{FACTION_INFO[rev.faction].label}</span>
             <p className="muted">
-              {rev.faction === 'pact' ? 'A Pact agent unmasked!' : 'They were innocent…'}
+              {rev.faction === 'syndicate' ? 'A Syndicate member unmasked!' : 'They were innocent… and now pay a 🚫 tariff on every trade.'}
             </p>
           </>
         ) : (

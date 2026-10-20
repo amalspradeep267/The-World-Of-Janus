@@ -1,32 +1,28 @@
 # The World of Janus: Design
 
-A hidden-identity diplomacy game for 3–8 friends on Discord, tuned for 4–5 players and about 35 minutes.
+A hidden-identity trading game for 3–8 friends on Discord, tuned for 4–5 players and about 35 minutes.
 
 ## The core idea
 
-There are two layers, and the game lives in the gap between them.
-
-| | Surface layer (public) | Board layer (hidden) |
+| | Surface (public) | Board (hidden) |
 |---|---|---|
-| Who you are | Your name and historic persona (Napoleon, Cleopatra…) | A nation icon on the map (🦁 🦅 🐉…) |
-| What others know | Everything | The icon, its location and its 3 resources |
-| What's secret | Which icon you rule, and your faction | Who rules each icon |
+| Who you are | Your player name | A city on the map: 🗽 New York, 💂 London, 🗼 Paris, 🏖️ Rio, 🏯 Tokyo, 🐪 Cairo, 🏛️ Rome, 🦘 Sydney |
+| What others see | Everything you do by day: trades, sales, votes | Each city's 3 resources and everything it does at night |
+| What's secret | Which city you rule, and your faction | Who rules each city |
 
-Day actions are signed with your persona. Night actions are reported by icon only. Players have to connect the two.
+Day actions are signed with your name. Night actions are reported by city only. **Identity is worked out by matching the two**, mostly through day-time trading and sales.
 
 ## Factions
 
-| Faction | Knows | Wins when (placeholder until War) |
-|---|---|---|
-| **Iron Pact** | Each other's icons | Any Pact player is still hidden at the end, **or** the Tribunal exposes an innocent |
-| **Concord** | Possibly one trusted partner (5+ players) | Every Pact player is exposed without exposing an innocent |
-| **Free Trader** | Nobody | ≥ 4 goods flowing through their trade routes (wins alongside whoever else wins) |
+| Faction | How many | Starts knowing | Wins when |
+|---|---|---|---|
+| 🔴 **The Syndicate** | 1 (2 with 6+ players) | Every Syndicate member's city | Any Syndicate member is still unexposed at the end of round 6 |
+| 🔵 **Concord** | Everyone else | Nothing, or one trusted partner (5+ players) | Every Syndicate member has been exposed at the Tribunal |
+| 🟡 **Free Trader** | 1 (4+ players) | Nothing | 4+ goods flowing through their trade routes at the end; wins alongside whoever else wins |
 
-### Player counts
+The Syndicate alone can use the 🕶️ black market. Unruled **bot cities** fill out the map so small groups still have plenty to work out:
 
-Bot nations ("no ruler") fill the map so small groups still have plenty to deduce.
-
-| Players | Pact | Concord | Trader | Nations on map | Concord pairs |
+| Players | Syndicate | Concord | Trader | Cities on map | Concord pairs |
 |---|---|---|---|---|---|
 | 3 | 1 | 2 | 0 | 6 | 0 |
 | 4 | 1 | 2 | 1 | 6 | 0 |
@@ -35,51 +31,59 @@ Bot nations ("no ruler") fill the map so small groups still have plenty to deduc
 | 7 | 2 | 4 | 1 | 8 | 1 |
 | 8 | 2 | 5 | 1 | 8 | 2 |
 
-## Round structure (6 rounds)
+## A round (6 rounds)
 
-1. **☀️ Harvest.** Every city gets +1 of each of its 3 resources. Then one pair of dice is rolled, and each matching tile yields 2. Trade routes add a bonus (see below).
-2. **☀️ Day: Diplomacy (public, by persona).** Talk on Discord.
-   - **Trade** cards with other players. Trades are logged publicly.
-   - **Sell** at the market for gold. Sales are public and push the price down.
-   - **Tribunal** (from round 3): a majority vote exposes a player's city and faction.
-3. **🌙 Night: Under the Table (secret, by city).**
-   - **✉️ Envoy** (🌾 Grain + 🐑 Wool): ask another city for a connection. **If they accept, they alone learn the sender's persona.** Unanswered envoys expire after a day and a night.
-   - **🤝 Open trade** (🪵 Timber + 🪨 Stone) in one good with a connected city. From then on, whenever either city harvests that good, the other gets 1 too.
-   - **🕵️ Spy** (4 gold): ask whether a specific player rules a specific city. Only you get the answer, but the news reports "spies spotted".
-   - **🕶️ Smuggle** (market price × 1.5 in gold): buy one card, delivered at dawn. Nobody sees who bought it.
-   - **🕶️ Pump** (2 gold): fake demand for a resource so its price jumps in the morning. Sell high the next day, but selling right after a spike looks suspicious.
-4. **📰 Morning news.** All night activity, listed by city icon in shuffled order, plus market moves. Spending, smuggling and pumping all push prices up.
+1. **☀️ Harvest.** Every city gets +1 of each of its 3 resources. One pair of dice is rolled, and each tile with that number yields 2 more. Trade routes add a share of partners' harvests.
+2. **☀️ Day (public, signed with your name).** Talk on Discord.
+   - **🔁 Trade** cards with other players. Every completed trade is in the public record.
+   - **💰 Sell** cards at the market for gold. Every sale is public, including how much it earned.
+   - **⚖️ Tribunal** (from round 3): if a majority accuses the same player by dusk, their city and faction are revealed.
+3. **🌙 Night (secret, by city).**
+   - **✉️ Envoy** (🌾 Grain + 🐑 Wool): ask another city for a connection. If they accept, they alone learn who sent it. Unanswered envoys expire after a day and a night.
+   - **🤝 Open trade** (🪵 Timber + 🪨 Stone): pick a good on an existing connection. From then on, whenever either city harvests it, the other gets 1 too.
+   - **🕵️ Spies** (12 gold): read one city's treasury for the round, meaning gold received from sales (and how many sales) and gold spent. No identities are revealed.
+   - **🕶️ Black market (Syndicate only):** **Smuggle** one card for 1.5× its price, or **Pump** a resource's price for 6 gold.
+4. **📰 Morning news.** Every night action, listed by city in shuffled order, plus market moves. Everyone gets the newspaper.
 
 ### Limits
-- Each city can have at most **3 connections**, and each connection can carry at most **2 traded goods**.
-- Everyone's **card count** (not which cards) is public. It updates at dawn and after public trades or sales, never in the middle of the night, so spending can't be watched as it happens. Hoarding shows.
+- Each city can have at most **3 connections**, and each connection at most **2 traded goods**.
+- Everyone's **card count** (not which cards) is public. It updates at dawn and after public trades or sales, never mid-night.
 
-## Trading is cover
+## Money and markets
+- **Prices start at 10 gold per card** and are always whole numbers. A sale pays exactly the listed price.
+- **Prices move on relative supply and demand.** Supply is units harvested plus units sold. Demand is units spent on recipes, smuggled or pumped. Each resource is compared with the average of all seven, so only goods that are scarcer or more plentiful than the rest move. Prices don't all slide down just because every city harvests each morning. Moves are capped at 30% per night, and a price never falls below 2.
+- **Gold** starts at 15. It comes from sales and pays for spies, the black market and tariffs. It will also matter in War.
 
-Each city produces only 3 of the 7 resources, and the recipes need specific cards. So most players **can't act at night without getting cards from someone**:
-- **Trade by day:** cheap, but public. Asking for 🌾 Grain hints that you're planning an envoy.
-- **Smuggle by night:** secret, but expensive.
-- **Decoy trades:** trading for cards you don't need muddies what you're really up to.
+## The Tribunal and tariffs
+- Exposing someone reveals their city and faction to everyone.
+- **Anyone exposed pays a tariff from then on:** 5 gold on every trade they're part of, and 25% less from market sales. An innocent exposure no longer ends the game; it handicaps that player instead.
+- Exposing every Syndicate member wins the game for the Concord immediately.
 
-## How deduction works
-1. Public trades and sales reveal which resources a persona holds and wants.
-2. Each city's 3 resources are public, so holdings point to a small set of cities.
-3. The recipes tie night actions to specific cards: whoever just traded for 🌾 + 🐑 probably sent that envoy.
-4. The news reports city-to-city activity. Market moves show what was spent, smuggled or pumped.
-5. Card counts show who is hoarding.
-6. Accepted envoys and spies give hard facts privately; the Tribunal gives them publicly.
+## How identity gets worked out
+1. **Recipes force public trading.** Most cities lack 🌾 + 🐑 or 🪵 + 🪨, so whoever traded for Grain and Wool today probably sent tonight's envoy.
+2. **Each city's 3 resources are public.** Whatever someone gives away in trades points to a few possible cities.
+3. **Spies plus public sales.** "Sydney received 34 gold from 2 sales" can be matched against who sold what by day.
+4. **Card counts** show who's hoarding.
+5. **Market moves** hint at what was spent or pumped. Only the Syndicate can pump.
+6. **Accepted envoys** tell the receiver who sent them. **The Tribunal** reveals someone to everyone.
 
 ## Decisions log
-- Factions are fictional; historic figures are cosmetic personas.
-- Envoys: the sender's persona is revealed to the receiver only, and only on accept. The news reports the connection by icon. *Revisit after playtests.*
-- Accepting a bot's envoy reveals "no player rules this city". That's a real clue, and intentional for now.
-- Session length is about 35 minutes. Multi-day play is parked for now.
+- Factions are fictional. Players are shown by their own names; personas were removed as redundant.
+- Envoys reveal the sender to the receiver only, on accept. *This is the one remaining non-trading way to learn an identity. Revisit after playtests.*
+- Spies reveal treasuries, not identities.
+- The black market is Syndicate-only.
+- Accepting a bot's envoy reveals "no player rules this city", and spies on a bot city find an empty treasury. Both are real clues.
+- Session length is about 35 minutes.
 - Hosting: static site on GitHub Pages plus peer-to-peer (the host's browser runs the game). No server.
 
+## Known issues
+- **The Tribunal can be brute-forced.** With no penalty beyond a tariff, the table can accuse a different player each day from round 3. With 4 players and 1 Syndicate member, that's 3 suspects over 4 Tribunal days. Options: cap exposures per game, open the Tribunal every other day, or make an innocent exposure cost the accusers too.
+- **The Syndicate is passive until War.** It wins by staying hidden.
+
 ## Roadmap
-- [x] **M1: Diplomacy loop.** Map, harvest, trade, market, envoys, routes, spies, news, Tribunal, bots, P2P rooms
-- [x] **M1.5: Economy.** Specific recipes, black market (smuggle, pump), route caps, public card counts, sound cues, quit to home
-- [ ] **M2: Arms and War.** Weapons need ⛏️ Ore + 🔥 Coal **and gold** (money pays for armies); forts need stone and timber; attacks are dice plus weapons vs forts plus secret ally support. Hoarding war materials is a tell. The Pact's real win becomes conquest.
-- [ ] **M3: Nobody sits out.** A conquered player becomes a *Government in Exile*: still wins with their faction, still votes, earns Unrest to sabotage occupiers, and can plant one rumor in the news each round.
-- [ ] **M4: Persona abilities** that leave fingerprints, e.g. Spymaster envoys show as ❓ in the news.
-- [ ] Phase timers (2 min day / 60 s night), host reconnect and saved state.
+- [x] **M1: Diplomacy loop.** Map, harvest, trade, market, envoys, routes, news, Tribunal, bots, P2P rooms
+- [x] **M1.5: Economy.** Recipes, black market, route caps, card counts, sound cues, quit to home
+- [x] **M1.6:** Relative pricing, whole-number gold, treasury spies, the Syndicate, tariffs, player names, map panning
+- [ ] **M2: Arms and War.** Weapons need ⛏️ Ore + 🔥 Coal **and gold** (money pays for armies); forts need stone and timber; attacks are dice plus weapons vs forts plus secret ally support. Hoarding war materials is a tell. The Syndicate's active win becomes conquest.
+- [ ] **M3: Nobody sits out.** A conquered player becomes a *Government in Exile*: still wins with their faction, still votes, and can sabotage occupiers.
+- [ ] Phase timers, host reconnect and saved state.

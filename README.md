@@ -2,7 +2,7 @@
 
 **A hidden-identity diplomacy game for 3–8 friends, played in the browser over Discord.** Named for Janus, the two-faced Roman god: everyone shows the table one face and plays the board with another.
 
-Everyone knows who's at the table. Nobody knows who rules which nation on the map. By day you trade and argue in the open. By night you send envoys, open trade routes and spy, and the morning news reports every move by nation, never by player. Work out who your real allies are before you fund your enemy.
+Everyone knows who's at the table. Nobody knows who rules which city on the map. By day you trade and sell in the open. By night you send envoys, open trade routes and spy on treasuries, and the morning news reports every move by city, never by player. Work out who your real allies are before you fund your enemy.
 
 ![Mid-game: trade routes and envoys on the map, with the morning news on the right](docs/screenshot.png)
 
@@ -10,14 +10,14 @@ Everyone knows who's at the table. Nobody knows who rules which nation on the ma
 
 | Phase | What happens | Who sees it |
 |---|---|---|
-| ☀️ **Harvest** | Dice decide what each nation's land produces. Trade routes share goods between partners. | Your hand is private |
-| ☀️ **Day: Diplomacy** | Trade with players, sell at the market, and vote at the Tribunal to expose a suspect. | Public, signed with your historic persona |
-| 🌙 **Night: Under the Table** | Send envoys, open trade routes, send spies. | Secret |
-| 📰 **Morning news** | Every night action, reported by nation icon, plus market moves. | Everyone, but without names |
+| ☀️ **Harvest** | Dice decide what each city's land produces. Trade routes share goods between partners. | Your hand is private |
+| ☀️ **Day: Diplomacy** | Trade with players, sell at the market, and vote at the Tribunal to expose a suspect. | Public, signed with your name |
+| 🌙 **Night: Under the Table** | Send envoys, open trade routes, spy on a city's treasury. | Secret |
+| 📰 **Morning news** | Every night action, reported by city, plus market moves. | Everyone, but without names |
 
-Each nation produces only 3 of 7 resources, and everyone can see which 3. Hand over Silk in a public trade and people will start wondering which Silk nation is yours.
+Each city produces only 3 of 7 resources, and night actions need specific cards, so most players must trade in public to act. Trade for Grain and Wool today, and people will guess you sent tonight's envoy.
 
-**Factions.** The **Iron Pact** knows its own members and wants to stay hidden. The **Concord** must expose the Pact without accusing an innocent. A lone **Free Trader** just wants busy trade routes. Unruled bot nations fill out the map, so even a 3-player game has plenty to work out.
+**Factions.** **The Syndicate** knows its own members, has the black market to itself, and wants to stay hidden. The **Concord** must expose every Syndicate member at the Tribunal. A lone **Free Trader** just wants busy trade routes. Unruled bot cities fill out the map, so even a 3-player game has plenty to work out.
 
 Full rules, design decisions and the roadmap are in [DESIGN.md](DESIGN.md).
 

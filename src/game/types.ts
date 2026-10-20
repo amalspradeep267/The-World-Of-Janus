@@ -42,7 +42,7 @@ export interface Envoy {
 export type NightPlan =
   | { kind: 'envoy'; to: NationId; paid: Partial<Hand> }
   | { kind: 'route'; with: NationId; good: Resource; paid: Partial<Hand> }
-  | { kind: 'spy'; nation: NationId; suspect: PlayerID; gold: number }
+  | { kind: 'spy'; nation: NationId; gold: number }
   | { kind: 'smuggle'; good: Resource; gold: number }
   | { kind: 'pump'; good: Resource; gold: number };
 
@@ -71,7 +71,13 @@ export interface Trade {
 export interface RosterEntry {
   id: PlayerID;
   name: string;
-  persona: string;
+}
+
+/** One player's gold movements this round. Secret; spies can read it. */
+export interface Ledger {
+  received: number;
+  sales: number;
+  spent: number;
 }
 
 /** Morning news is structured so the UI can draw it instead of printing sentences. */
@@ -108,11 +114,12 @@ export interface GState {
   rolls: number[];
   prices: Record<Resource, number>;
   priceChange: Partial<Record<Resource, number>>;
-  /** Units spent at night / sold by day this round; drives the price moves. */
+  /** Units harvested or sold (supply) and spent, smuggled or pumped (demand) this round. */
+  supply: Partial<Record<Resource, number>>;
   demand: Partial<Record<Resource, number>>;
   /** Morning news per round, newest last. Reports nations, never players. */
   news: { round: number; items: NewsItem[] }[];
-  /** The public (surface-layer) log: trades, sales and the Tribunal, by persona. */
+  /** The public (surface-layer) log: trades, sales and the Tribunal, by player name. */
   publicLog: { round: number; text: string }[];
   trades: Trade[];
   votes: Record<PlayerID, PlayerID | null>;
@@ -121,11 +128,13 @@ export interface GState {
   handSizes: Record<PlayerID, number>;
   revealed: Record<PlayerID, { nation: NationId; faction: Faction }>;
   verdicts: Verdict[];
-  wrongExposures: number;
+  /** Players exposed by the Tribunal pay a tariff on trades and sales. */
+  tariffed: Record<PlayerID, boolean>;
   nextId: number;
   result: GameResult | null;
 
   // ---- secret: stripped by playerView ----
   owners: Partial<Record<NationId, Controller>>;
   players: Record<PlayerID, PlayerSecret>;
+  ledgers: Record<PlayerID, Ledger>;
 }
