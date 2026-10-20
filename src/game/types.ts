@@ -40,8 +40,8 @@ export interface Envoy {
 }
 
 export type NightPlan =
-  | { kind: 'envoy'; to: NationId; paid: Partial<Hand> }
-  | { kind: 'route'; with: NationId; good: Resource; paid: Partial<Hand> }
+  | { kind: 'envoy'; to: NationId; paid: Partial<Hand>; gold: number }
+  | { kind: 'route'; with: NationId; good: Resource; paid: Partial<Hand>; gold: number }
   | { kind: 'spy'; nation: NationId; gold: number }
   | { kind: 'smuggle'; good: Resource; gold: number }
   | { kind: 'pump'; good: Resource; gold: number };
@@ -57,6 +57,8 @@ export interface PlayerSecret {
   plans: NightPlan[];
   /** What this morning's harvest brought: own land, and extra from trade routes. */
   harvest: { land: Hand; routes: Hand };
+  /** Free Trader only: gold set aside for a veto today (0 = not armed). Secret. */
+  veto: number;
 }
 
 export interface Trade {
@@ -92,8 +94,18 @@ export type NewsItem =
 
 export interface Verdict {
   round: number;
-  /** null when votes were cast but nobody reached a majority. */
+  /** Fewer than the minimum entered: no session, fees refunded. */
+  convened: boolean;
+  /** The accused who reached a majority, or null when nobody did. */
   target: PlayerID | null;
+  vetoed: boolean;
+  /** Voters fined for exposing an innocent. */
+  fined: PlayerID[];
+}
+
+export interface Settings {
+  /** When false, the Tribunal reveals an exposed player's city but keeps their faction secret. */
+  revealFaction: boolean;
 }
 
 export interface GameResult {
@@ -122,11 +134,15 @@ export interface GState {
   /** The public (surface-layer) log: trades, sales and the Tribunal, by player name. */
   publicLog: { round: number; text: string }[];
   trades: Trade[];
+  /** Today's Tribunal: who paid to enter, and whom each entrant accuses. */
+  entrants: Record<PlayerID, boolean>;
   votes: Record<PlayerID, PlayerID | null>;
+  settings: Settings;
   ready: Record<PlayerID, boolean>;
   /** Public card count per player (not which cards), so hoarding can be spotted. */
   handSizes: Record<PlayerID, number>;
-  revealed: Record<PlayerID, { nation: NationId; faction: Faction }>;
+  /** faction is null when the host keeps exposed factions secret. */
+  revealed: Record<PlayerID, { nation: NationId; faction: Faction | null }>;
   verdicts: Verdict[];
   /** Players exposed by the Tribunal pay a tariff on trades and sales. */
   tariffed: Record<PlayerID, boolean>;

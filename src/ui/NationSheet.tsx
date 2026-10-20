@@ -9,7 +9,7 @@ import {
   type NationId,
   type Resource,
 } from '../game/constants';
-import { findRoute, routeCount } from '../game/game';
+import { cityDistance, distanceGold, findRoute, routeCount } from '../game/game';
 import type { GState, PlayerSecret } from '../game/types';
 import { Avatar, playerOf, Recipe, ResPill, missingFor } from './common';
 
@@ -40,6 +40,9 @@ export function NationSheet({ G, phase, me, nation, moves, onClose }: Props) {
   const plannedEnvoys = me.plans.filter((p) => p.kind === 'envoy').length;
   const atRouteCap = routeCount(G, me.nation) + plannedEnvoys >= MAX_ROUTES_PER_CITY;
   const canSmuggle = me.faction === 'syndicate';
+  const hexes = cityDistance(G, me.nation, nation);
+  const travel = distanceGold(G, me.nation, nation);
+  const shortOfGold = me.gold < travel;
   const envoyMissing = missingFor(me.hand, RECIPE.envoy);
   const routeMissing = missingFor(me.hand, RECIPE.route);
   const plannedGoods = me.plans.filter((p) => p.kind === 'route' && p.with === nation).length;
@@ -56,14 +59,18 @@ export function NationSheet({ G, phase, me, nation, moves, onClose }: Props) {
       ? `You already have ${MAX_ROUTES_PER_CITY} connections (the maximum).`
       : envoyMissing.length
         ? `Missing ${envoyMissing.map((r) => RESOURCE_INFO[r].emoji).join(' ')}: trade for it by day${canSmuggle ? ' or 🕶️ smuggle it' : ''}.`
-        : null;
+        : shortOfGold
+          ? `It's far away: you need ${travel} gold for the journey.`
+          : null;
   const routeBlock = goodsFull
     ? `This connection already carries ${MAX_GOODS_PER_ROUTE} goods (the maximum).`
     : routeMissing.length
       ? `Missing ${routeMissing.map((r) => RESOURCE_INFO[r].emoji).join(' ')}: trade for it by day${canSmuggle ? ' or 🕶️ smuggle it' : ''}.`
       : tradeable.length === 0
         ? 'Every good between you is already traded.'
-        : null;
+        : shortOfGold
+          ? `It's far away: you need ${travel} gold to ship goods there.`
+          : null;
 
   const ruler = mine ? (
     <span className="muted small">Your city</span>
@@ -96,6 +103,11 @@ export function NationSheet({ G, phase, me, nation, moves, onClose }: Props) {
       </div>
       <p className="small muted" style={{ marginTop: 8 }}>
         🔗 {routeCount(G, nation)}/{MAX_ROUTES_PER_CITY} connections
+        {!mine && (
+          <>
+            {' · '}📏 {hexes} hexes away{travel > 0 ? ` · envoys & trade cost +🪙${travel}` : ' · no travel cost'}
+          </>
+        )}
       </p>
       {route && (
         <p className="small">
@@ -119,7 +131,12 @@ export function NationSheet({ G, phase, me, nation, moves, onClose }: Props) {
                 <b>{plannedEnvoy ? 'Envoy ordered ✓' : 'Send an envoy'}</b>
                 <span>{envoyBlock && !plannedEnvoy ? envoyBlock : "If they accept, you're connected and they learn who you are."}</span>
               </span>
-              {!plannedEnvoy && <Recipe recipe={RECIPE.envoy} hand={me.hand} />}
+              {!plannedEnvoy && (
+                <span className="cost">
+                  <Recipe recipe={RECIPE.envoy} hand={me.hand} />
+                  {travel > 0 && <span className={shortOfGold ? 'lacking' : ''}>🪙{travel}</span>}
+                </span>
+              )}
             </button>
           )}
 
@@ -130,7 +147,10 @@ export function NationSheet({ G, phase, me, nation, moves, onClose }: Props) {
                 <b>Open a trade route</b>
                 <span>{routeBlock ?? 'Pick a good. Whenever one of you harvests it, the other gets 1 too.'}</span>
               </span>
-              <Recipe recipe={RECIPE.route} hand={me.hand} />
+              <span className="cost">
+                <Recipe recipe={RECIPE.route} hand={me.hand} />
+                {travel > 0 && <span className={shortOfGold ? 'lacking' : ''}>🪙{travel}</span>}
+              </span>
             </button>
           )}
           {mode === 'trade' && (

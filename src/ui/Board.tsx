@@ -118,7 +118,7 @@ export function Board(props: BoardProps<GState>) {
       show: phase === 'day',
       disabled: !tribunalOpen,
       title: tribunalOpen ? 'Accuse a player' : `Opens on day ${TRIBUNAL_FROM_ROUND}`,
-      badge: Object.values(G.votes).filter((v) => v === playerID).length || undefined,
+      badge: Object.keys(G.entrants).length || undefined,
     },
     { id: 'news', icon: '📰', label: 'News', show: true },
     { id: 'players', icon: '👥', label: 'Players', show: true },
@@ -284,7 +284,7 @@ export function Board(props: BoardProps<GState>) {
       {panel === 'trade' && <TradeModal G={G} me={me} playerID={playerID!} moves={moves} onClose={() => setPanel(null)} />}
       {panel === 'market' && <MarketModal G={G} me={me} playerID={playerID!} moves={moves} onClose={() => setPanel(null)} />}
       {panel === 'black' && <BlackMarketModal G={G} me={me} moves={moves} onClose={() => setPanel(null)} />}
-      {panel === 'tribunal' && <TribunalModal G={G} playerID={playerID!} moves={moves} onClose={() => setPanel(null)} />}
+      {panel === 'tribunal' && <TribunalModal G={G} me={me} playerID={playerID!} moves={moves} onClose={() => setPanel(null)} />}
       {panel === 'identity' && <IdentityModal G={G} me={me} onClose={() => setPanel(null)} />}
       {panel === 'players' && <PlayersModal G={G} onClose={() => setPanel(null)} />}
       {panel === 'news' && (

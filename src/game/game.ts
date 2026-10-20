@@ -4,6 +4,7 @@ import {
   BASE_INCOME,
   BOT,
   COST,
+  DISTANCE,
   DICE_YIELD,
   FACTION_INFO,
   HARVEST_ROLLS,
@@ -28,13 +29,14 @@ import {
   START_GOLD,
   START_PRICE,
   TRADER_GOAL,
+  TRIBUNAL,
   TRIBUNAL_FROM_ROUND,
   type Faction,
   type NationId,
   type Resource,
 } from './constants';
-import { generateMap, type Rng } from './map';
-import type { GameResult, GState, Hand, NewsItem, PlayerID, PlayerSecret, Route } from './types';
+import { generateMap, hexDistance, type Rng } from './map';
+import type { GameResult, GState, Hand, NewsItem, PlayerID, PlayerSecret, Route, Settings } from './types';
 
 export const GAME_NAME = 'the-world-of-janus';
 
@@ -57,6 +59,17 @@ export const icon = (G: GState, n: NationId) => `${G.nations[n]!.icon} ${G.natio
 const nameOf = (G: GState, pid: PlayerID) => G.roster.find((p) => p.id === pid)!.name;
 
 export const routeCount = (G: GState, n: NationId) => G.routes.filter((rt) => rt.a === n || rt.b === n).length;
+
+/** Hexes between two cities' capitals. */
+export function cityDistance(G: GState, a: NationId, b: NationId) {
+  const ta = G.tiles[G.nations[a]!.tiles[0]];
+  const tb = G.tiles[G.nations[b]!.tiles[0]];
+  return hexDistance(ta, tb);
+}
+
+/** Extra gold for an envoy or trade route between two cities, growing with distance. */
+export const distanceGold = (G: GState, a: NationId, b: NationId) =>
+  Math.max(0, cityDistance(G, a, b) - DISTANCE.freeHexes) * DISTANCE.goldPerHex;
 
 /** Price of one card on the black market. */
 export const smugglePrice = (G: GState, r: Resource) => Math.ceil(G.prices[r] * SMUGGLE_MARKUP);
@@ -125,6 +138,7 @@ function startDay({ G, random }: { G: GState; random: Rng & { D6(): number } }) 
   if (G.result) return;
   G.round += 1;
   G.votes = {};
+  G.entrants = {};
   G.ready = {};
   G.trades = [];
   for (const pid of humans(G)) G.ledgers[pid] = freshLedger();
@@ -169,30 +183,79 @@ function endDay({ G }: { G: GState }) {
   for (const t of G.trades) if (t.status === 'open') t.status = 'expired';
   G.trades = [];
 
-  if (G.round >= TRIBUNAL_FROM_ROUND) {
-    const tally: Record<PlayerID, number> = {};
-    for (const target of Object.values(G.votes)) if (target != null) tally[target] = (tally[target] ?? 0) + 1;
-    const majority = Math.floor(G.roster.length / 2) + 1;
-    const exposed = Object.keys(tally).find((pid) => tally[pid] >= majority && !G.revealed[pid]);
-    if (Object.keys(tally).length > 0) G.verdicts.push({ round: G.round, target: exposed ?? null });
-    if (exposed) {
-      const p = G.players[exposed];
-      G.revealed[exposed] = { nation: p.nation, faction: p.faction };
-      G.publicLog.push({
-        round: G.round,
-        text: `⚖️ The Tribunal exposed ${nameOf(G, exposed)}: they rule ${icon(G, p.nation)}. Faction: ${FACTION_INFO[p.faction].label}. A tariff now applies to all their trades.`,
-      });
-      G.tariffed[exposed] = true;
-      const left = humans(G).filter((pid) => G.players[pid].faction === 'syndicate' && !G.revealed[pid]);
-      if (left.length === 0) {
-        G.result = finalResult(G, ['concord'], 'Every Syndicate member was exposed. The Concord wins.');
-      }
-    } else if (Object.keys(tally).length > 0) {
-      G.publicLog.push({ round: G.round, text: '⚖️ The Tribunal could not reach a majority.' });
-    }
-  }
+  if (G.round >= TRIBUNAL_FROM_ROUND) resolveTribunal(G);
+  for (const pid of humans(G)) G.players[pid].veto = 0;
   G.votes = {};
+  G.entrants = {};
   G.ready = {};
+}
+
+function spend(G: GState, pid: PlayerID, gold: number) {
+  G.players[pid].gold -= gold;
+  G.ledgers[pid].spent += gold;
+}
+function unspend(G: GState, pid: PlayerID, gold: number) {
+  G.players[pid].gold += gold;
+  G.ledgers[pid].spent -= gold;
+}
+
+function resolveTribunal(G: GState) {
+  const entrants = humans(G).filter((pid) => G.entrants[pid]);
+  if (entrants.length === 0) return;
+  if (entrants.length < TRIBUNAL.minEntrants) {
+    for (const pid of entrants) unspend(G, pid, TRIBUNAL.entryGold);
+    for (const pid of entrants) if (G.votes[pid] != null) unspend(G, pid, TRIBUNAL.voteGold);
+    for (const pid of entrants) if (G.players[pid].veto) unspend(G, pid, G.players[pid].veto);
+    G.verdicts.push({ round: G.round, convened: false, target: null, vetoed: false, fined: [] });
+    G.publicLog.push({
+      round: G.round,
+      text: `⚖️ Only ${entrants.length} entered the Tribunal (${TRIBUNAL.minEntrants} needed). It did not sit; fees were refunded.`,
+    });
+    return;
+  }
+
+  const tally: Record<PlayerID, number> = {};
+  for (const pid of entrants) {
+    const target = G.votes[pid];
+    if (target != null) tally[target] = (tally[target] ?? 0) + 1;
+  }
+  const majority = Math.floor(entrants.length / 2) + 1;
+  const accused = Object.keys(tally).find((pid) => tally[pid] >= majority && !G.revealed[pid]) ?? null;
+  const vetoer = entrants.find((pid) => G.players[pid].veto > 0);
+
+  // An unused veto is refunded.
+  if (vetoer && !accused) unspend(G, vetoer, G.players[vetoer].veto);
+
+  if (!accused) {
+    G.verdicts.push({ round: G.round, convened: true, target: null, vetoed: false, fined: [] });
+    G.publicLog.push({ round: G.round, text: `⚖️ The Tribunal (${entrants.length} entrants) could not reach a majority.` });
+    return;
+  }
+  if (vetoer) {
+    G.verdicts.push({ round: G.round, convened: true, target: accused, vetoed: true, fined: [] });
+    G.publicLog.push({ round: G.round, text: `⚖️ The Tribunal moved to expose ${nameOf(G, accused)}, but a secret veto struck the verdict down.` });
+    return;
+  }
+
+  const p = G.players[accused];
+  G.revealed[accused] = { nation: p.nation, faction: G.settings.revealFaction ? p.faction : null };
+  G.tariffed[accused] = true;
+  const innocent = p.faction !== 'syndicate';
+  const fined = innocent ? entrants.filter((pid) => G.votes[pid] === accused) : [];
+  for (const pid of fined) spend(G, pid, Math.min(TRIBUNAL.innocentFine, G.players[pid].gold));
+  G.verdicts.push({ round: G.round, convened: true, target: accused, vetoed: false, fined });
+  const factionText = G.settings.revealFaction ? ` Faction: ${FACTION_INFO[p.faction].label}.` : ' Their faction stays secret.';
+  const fineText = fined.length ? ` They were innocent: ${fined.map((pid) => nameOf(G, pid)).join(', ')} paid a ${TRIBUNAL.innocentFine}-gold fine.` : '';
+  G.publicLog.push({
+    round: G.round,
+    text: `⚖️ The Tribunal exposed ${nameOf(G, accused)}: they rule ${icon(G, p.nation)}.${factionText} A tariff now applies to all their trades.${G.settings.revealFaction ? fineText : ''}`,
+  });
+  // Fines happen either way; with factions secret, they are reported without saying why.
+  if (!G.settings.revealFaction && fined.length) {
+    G.publicLog.push({ round: G.round, text: `⚖️ ${fined.map((pid) => nameOf(G, pid)).join(', ')} paid a fine of ${TRIBUNAL.innocentFine} gold.` });
+  }
+  const left = humans(G).filter((pid) => G.players[pid].faction === 'syndicate' && !G.revealed[pid]);
+  if (left.length === 0) G.result = finalResult(G, ['concord'], 'Every Syndicate member was exposed. The Concord wins.');
 }
 
 function startNight({ G }: { G: GState }) {
@@ -215,6 +278,7 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
       if (plan.kind === 'envoy') {
         if (findRoute(G, p.nation, plan.to) || pendingBetween(G, p.nation, plan.to) || routeCount(G, p.nation) >= MAX_ROUTES_PER_CITY) {
           refund(p, plan.paid);
+          unspend(G, pid, plan.gold);
           p.inbox.push({ round: G.round, text: `Your envoy to ${icon(G, plan.to)} was recalled (already in contact). Refunded.` });
           continue;
         }
@@ -224,6 +288,7 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
         const rt = findRoute(G, p.nation, plan.with);
         if (!rt || rt.goods.includes(plan.good) || rt.goods.length >= MAX_GOODS_PER_ROUTE) {
           refund(p, plan.paid);
+          unspend(G, pid, plan.gold);
           p.inbox.push({ round: G.round, text: `Trade with ${icon(G, plan.with)} could not open. Refunded.` });
           continue;
         }
@@ -432,10 +497,39 @@ const sell = hostOnly(({ G, playerID }, resource: Resource, qty: number) => {
   });
 });
 
+const enterTribunal = hostOnly(({ G, playerID }) => {
+  const p = me(G, playerID);
+  if (!p || G.round < TRIBUNAL_FROM_ROUND || G.entrants[playerID!] || p.gold < TRIBUNAL.entryGold) return INVALID_MOVE;
+  spend(G, playerID!, TRIBUNAL.entryGold);
+  G.entrants[playerID!] = true;
+});
+
+/** Entrants vote; the first vote costs gold, switching is free, withdrawing refunds it. */
 const vote = hostOnly(({ G, playerID }, target: PlayerID | null) => {
-  if (playerID == null || !G.players[playerID] || G.round < TRIBUNAL_FROM_ROUND) return INVALID_MOVE;
+  const p = me(G, playerID);
+  if (!p || G.round < TRIBUNAL_FROM_ROUND || !G.entrants[playerID!]) return INVALID_MOVE;
   if (target != null && (target === playerID || !G.players[target] || G.revealed[target])) return INVALID_MOVE;
-  G.votes[playerID] = target;
+  const had = G.votes[playerID!] != null;
+  if (target != null && !had) {
+    if (p.gold < TRIBUNAL.voteGold) return INVALID_MOVE;
+    spend(G, playerID!, TRIBUNAL.voteGold);
+  }
+  if (target == null && had) unspend(G, playerID!, TRIBUNAL.voteGold);
+  G.votes[playerID!] = target;
+});
+
+/** Free Trader only, inside the Tribunal: arm (or disarm) a secret veto for today. */
+const armVeto = hostOnly(({ G, playerID }, on: boolean) => {
+  const p = me(G, playerID);
+  if (!p || p.faction !== 'trader' || !G.entrants[playerID!]) return INVALID_MOVE;
+  if (on && !p.veto) {
+    if (p.gold < TRIBUNAL.vetoGold) return INVALID_MOVE;
+    spend(G, playerID!, TRIBUNAL.vetoGold);
+    p.veto = TRIBUNAL.vetoGold;
+  } else if (!on && p.veto) {
+    unspend(G, playerID!, p.veto);
+    p.veto = 0;
+  }
 });
 
 const planEnvoy = hostOnly(({ G, playerID }, to: NationId) => {
@@ -446,9 +540,11 @@ const planEnvoy = hostOnly(({ G, playerID }, to: NationId) => {
   const planned = p.plans.filter((x) => x.kind === 'envoy').length;
   if (routeCount(G, p.nation) + planned >= MAX_ROUTES_PER_CITY) return INVALID_MOVE;
   const paid = { ...RECIPE.envoy };
-  if (!hasGoods(p.hand, paid)) return INVALID_MOVE;
+  const gold = distanceGold(G, p.nation, to);
+  if (!hasGoods(p.hand, paid) || p.gold < gold) return INVALID_MOVE;
   moveGoods(p.hand, null, paid);
-  p.plans.push({ kind: 'envoy', to, paid });
+  p.gold -= gold;
+  p.plans.push({ kind: 'envoy', to, paid, gold });
 });
 
 const planRoute = hostOnly(({ G, playerID }, partner: NationId, good: Resource) => {
@@ -461,9 +557,11 @@ const planRoute = hostOnly(({ G, playerID }, partner: NationId, good: Resource) 
   const planned = p.plans.filter((x) => x.kind === 'route' && x.with === partner).length;
   if (rt.goods.length + planned >= MAX_GOODS_PER_ROUTE) return INVALID_MOVE;
   const paid = { ...RECIPE.route };
-  if (!hasGoods(p.hand, paid)) return INVALID_MOVE;
+  const gold = distanceGold(G, p.nation, partner);
+  if (!hasGoods(p.hand, paid) || p.gold < gold) return INVALID_MOVE;
   moveGoods(p.hand, null, paid);
-  p.plans.push({ kind: 'route', with: partner, good, paid });
+  p.gold -= gold;
+  p.plans.push({ kind: 'route', with: partner, good, paid, gold });
 });
 
 const planSpy = hostOnly(({ G, playerID }, nation: NationId) => {
@@ -497,8 +595,8 @@ const cancelPlan = hostOnly(({ G, playerID }, index: number) => {
   const p = me(G, playerID);
   const plan = p?.plans[index];
   if (!p || !plan) return INVALID_MOVE;
-  if ('gold' in plan) p.gold += plan.gold;
-  else refund(p, plan.paid);
+  p.gold += plan.gold;
+  if ('paid' in plan) refund(p, plan.paid);
   p.plans.splice(index, 1);
 });
 
@@ -510,7 +608,7 @@ const allReady = ({ G }: { G: GState }) => G.roster.every((p) => G.ready[p.id]);
  * Builds the game for a given roster. The P2P transport can't pass setup data,
  * so the friend names (shared through the room link) are baked in here.
  */
-export function makeGame(names: string[]): Game<GState> {
+export function makeGame(names: string[], settings: Settings = { revealFaction: true }): Game<GState> {
   return {
     name: GAME_NAME,
     minPlayers: MIN_PLAYERS,
@@ -549,6 +647,7 @@ export function makeGame(names: string[]): Game<GState> {
           inbox: [],
           plans: [],
           harvest: { land: emptyHand(), routes: emptyHand() },
+          veto: 0,
         };
       });
 
@@ -597,7 +696,9 @@ export function makeGame(names: string[]): Game<GState> {
         ],
         publicLog: [],
         trades: [],
+        entrants: {},
         votes: {},
+        settings: { ...settings },
         ready: {},
         handSizes: Object.fromEntries(ids.map((id) => [id, handTotal(players[id].hand)])),
         revealed: {},
@@ -619,7 +720,7 @@ export function makeGame(names: string[]): Game<GState> {
         onEnd: endDay,
         endIf: allReady,
         turn: { activePlayers: ActivePlayers.ALL },
-        moves: { setReady, respondEnvoy, proposeTrade, respondTrade, cancelTrade, sell, vote },
+        moves: { setReady, respondEnvoy, proposeTrade, respondTrade, cancelTrade, sell, enterTribunal, vote, armVeto },
       },
       night: {
         next: 'day',

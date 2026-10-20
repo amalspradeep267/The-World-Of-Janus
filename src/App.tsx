@@ -6,6 +6,7 @@ import { FRIENDS } from './config';
 import { MAX_PLAYERS, MIN_PLAYERS } from './game/constants';
 import { makeGame } from './game/game';
 import { getCredentials, getSeat, isHost, markHost, newRoomCode, parseHash, roomHash, roomLink, setSeat, type Route } from './net/room';
+import type { Settings } from './game/types';
 import { Board } from './ui/Board';
 import { setAudibleSeat } from './ui/sound';
 
@@ -18,7 +19,7 @@ export function App() {
   }, []);
 
   if (route.page === 'practice') return <Practice players={route.players} />;
-  if (route.page === 'room') return <Room code={route.code} roster={route.roster} />;
+  if (route.page === 'room') return <Room code={route.code} roster={route.roster} settings={route.settings} />;
   return <Home />;
 }
 
@@ -26,6 +27,7 @@ function Home() {
   const [me, setMe] = useState(FRIENDS[0]);
   const [others, setOthers] = useState<string[]>([]);
   const [practiceN, setPracticeN] = useState(4);
+  const [revealFaction, setRevealFaction] = useState(true);
   const roster = [me, ...others.filter((o) => o !== me)];
   const count = roster.length;
 
@@ -33,7 +35,7 @@ function Home() {
     const code = newRoomCode();
     markHost(code);
     setSeat(code, '0');
-    location.hash = roomHash(code, roster);
+    location.hash = roomHash(code, roster, { revealFaction });
   };
 
   return (
@@ -68,6 +70,10 @@ function Home() {
               </label>
             ))}
           </div>
+          <label className="row small" style={{ marginBottom: 12 }} title="Like Among Us's anonymous ejects">
+            <input type="checkbox" checked={revealFaction} onChange={(e) => setRevealFaction(e.target.checked)} />
+            ⚖️ Tribunal reveals the exposed player's faction
+          </label>
           <button className="primary" disabled={count < MIN_PLAYERS || count > MAX_PLAYERS} onClick={host}>
             Create room ({count} players)
           </button>
@@ -99,7 +105,7 @@ function Home() {
   );
 }
 
-function Room({ code, roster }: { code: string; roster: string[] }) {
+function Room({ code, roster, settings }: { code: string; roster: string[]; settings: Settings }) {
   const [seat, setSeatState] = useState<string | null>(() => getSeat(code));
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -109,7 +115,7 @@ function Room({ code, roster }: { code: string; roster: string[] }) {
   const GameClient = useMemo(
     () =>
       Client({
-        game: makeGame(roster),
+        game: makeGame(roster, settings),
         board: Board,
         numPlayers: roster.length,
         multiplayer: P2P({ isHost: host, onError: (e) => setError(String(e?.message ?? e)) }),
@@ -121,7 +127,7 @@ function Room({ code, roster }: { code: string; roster: string[] }) {
         ),
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [code, roster.join(','), host],
+    [code, roster.join(','), host, settings.revealFaction],
   );
 
   if (!valid) {
@@ -164,12 +170,12 @@ function Room({ code, roster }: { code: string; roster: string[] }) {
       {host && (
         <div className="seat-tabs">
           <span className="small">
-            🔗 Invite link for Discord: <code>{roomLink(code, roster)}</code>
+            🔗 Invite link for Discord: <code>{roomLink(code, roster, settings)}</code>
           </span>
           <button
             className="tiny"
             onClick={() => {
-              navigator.clipboard?.writeText(roomLink(code, roster)).then(() => setCopied(true));
+              navigator.clipboard?.writeText(roomLink(code, roster, settings)).then(() => setCopied(true));
             }}
           >
             {copied ? 'Copied' : 'Copy'}

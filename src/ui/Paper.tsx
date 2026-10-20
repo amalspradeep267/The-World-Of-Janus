@@ -1,4 +1,4 @@
-import { FACTION_INFO, RESOURCES, RESOURCE_INFO, type NationId } from '../game/constants';
+import { FACTION_INFO, RESOURCES, RESOURCE_INFO, TRIBUNAL, type NationId } from '../game/constants';
 import type { GState, NewsItem, PlayerSecret } from '../game/types';
 import { Avatar, Die, nationIcon, nationName, playerOf, ResCard } from './common';
 
@@ -148,32 +148,67 @@ export function VerdictOverlay({ G, onClose }: { G: GState; onClose: () => void 
   const v = G.verdicts[G.verdicts.length - 1];
   const target = v.target != null ? playerOf(G, v.target) : null;
   const rev = v.target != null ? G.revealed[v.target] : null;
+  const fined = v.fined.map((id) => playerOf(G, id).name);
+  let body;
+  if (!v.convened) {
+    body = (
+      <>
+        <div style={{ fontSize: 60, margin: 12 }}>🏛️</div>
+        <h2>The Tribunal did not sit</h2>
+        <p className="muted">Too few players entered. Their fees were refunded.</p>
+      </>
+    );
+  } else if (target && v.vetoed) {
+    body = (
+      <>
+        <div className="center" style={{ gap: 14, margin: '18px 0' }}>
+          <Avatar name={target.name} size={70} />
+          <span style={{ fontSize: 46 }}>🛑</span>
+        </div>
+        <h2>Vetoed!</h2>
+        <p className="muted">The Tribunal moved to expose {target.name}, but a secret veto struck the verdict down.</p>
+      </>
+    );
+  } else if (target && rev) {
+    body = (
+      <>
+        <div className="center" style={{ gap: 18, margin: '18px 0' }}>
+          <Avatar name={target.name} size={70} />
+          <span style={{ fontSize: 30 }}>=</span>
+          <div className="seal" style={{ width: 90, height: 90, fontSize: 52, margin: 0 }}>
+            {nationIcon(G, rev.nation)}
+          </div>
+        </div>
+        <h2>{target.name} is exposed</h2>
+        {rev.faction ? (
+          <span className={`faction-tag faction-${rev.faction}`}>{FACTION_INFO[rev.faction].label}</span>
+        ) : (
+          <span className="faction-tag" style={{ background: '#333' }}>Faction kept secret</span>
+        )}
+        <p className="muted">
+          {rev.faction === 'syndicate'
+            ? 'A Syndicate member unmasked!'
+            : rev.faction
+              ? 'They were innocent… and now pay a 🚫 tariff on every trade.'
+              : 'They now pay a 🚫 tariff on every trade.'}
+        </p>
+        {fined.length > 0 && <p className="small">💸 Fined {TRIBUNAL.innocentFine} gold each for accusing an innocent: {fined.join(', ')}</p>}
+      </>
+    );
+  } else {
+    body = (
+      <>
+        <div style={{ fontSize: 60, margin: 12 }}>🤷</div>
+        <h2>No majority</h2>
+        <p className="muted">Nobody was exposed today.</p>
+      </>
+    );
+  }
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal reveal" onClick={(e) => e.stopPropagation()}>
-        <h3>⚖️ The Tribunal has spoken</h3>
-        {target && rev ? (
-          <>
-            <div className="center" style={{ gap: 18, margin: '18px 0' }}>
-              <Avatar name={target.name} size={70} />
-              <span style={{ fontSize: 30 }}>=</span>
-              <div className="seal" style={{ width: 90, height: 90, fontSize: 52, margin: 0 }}>
-                {nationIcon(G, rev.nation)}
-              </div>
-            </div>
-            <h2>{target.name} is exposed</h2>
-            <span className={`faction-tag faction-${rev.faction}`}>{FACTION_INFO[rev.faction].label}</span>
-            <p className="muted">
-              {rev.faction === 'syndicate' ? 'A Syndicate member unmasked!' : 'They were innocent… and now pay a 🚫 tariff on every trade.'}
-            </p>
-          </>
-        ) : (
-          <>
-            <div style={{ fontSize: 60, margin: 12 }}>🤷</div>
-            <h2>No majority</h2>
-            <p className="muted">Nobody was exposed today.</p>
-          </>
-        )}
+        <h3>⚖️ The Tribunal</h3>
+        {body}
         <button className="primary" onClick={onClose}>
           Continue to night 🌙
         </button>

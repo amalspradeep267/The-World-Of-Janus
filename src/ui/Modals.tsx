@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FACTION_INFO, MAX_ROUNDS, PUMP, RECIPE, RESOURCES, RESOURCE_INFO, TRIBUNAL_FROM_ROUND, type NationId, type Resource } from '../game/constants';
+import { FACTION_INFO, MAX_ROUNDS, PUMP, RECIPE, RESOURCES, RESOURCE_INFO, TRIBUNAL, TRIBUNAL_FROM_ROUND, type NationId, type Resource } from '../game/constants';
 import { handTotal, saleValue, smugglePrice } from '../game/game';
 import type { GState, Hand, PlayerSecret } from '../game/types';
 import { Avatar, GoldCard, goodsEmoji, Modal, nationIcon, nationName, playerOf, Recipe, ResCard, ResPill } from './common';
@@ -150,44 +150,87 @@ export function BlackMarketModal({ G, me, moves, onClose }: { G: GState; me: Pla
 
 // ---------- Tribunal ----------
 
-export function TribunalModal({ G, playerID, moves, onClose }: { G: GState; playerID: string; moves: Moves; onClose: () => void }) {
-  const majority = Math.floor(G.roster.length / 2) + 1;
+export function TribunalModal({ G, me, playerID, moves, onClose }: { G: GState; me: PlayerSecret; playerID: string; moves: Moves; onClose: () => void }) {
+  const entrants = G.roster.filter((p) => G.entrants[p.id]);
+  const inside = !!G.entrants[playerID];
+  const convenes = entrants.length >= TRIBUNAL.minEntrants;
+  const majority = Math.floor(Math.max(entrants.length, TRIBUNAL.minEntrants) / 2) + 1;
   const myVote = G.votes[playerID];
   return (
     <Modal icon="⚖️" title="Tribunal" onClose={onClose}>
       <p className="small muted">
-        Accuse someone. If <b>{majority}</b> players accuse the same person by dusk, their city and faction are revealed, and from then
-        on they pay a 🚫 tariff on every trade and sale, guilty or not.
+        Pay to enter, or stay out. At dusk it sits only if <b>{TRIBUNAL.minEntrants}+</b> players entered. A majority of entrants exposes the
+        accused: their city{G.settings.revealFaction ? ' and faction are' : ' is'} revealed and they pay a 🚫 tariff. Expose an innocent and
+        everyone who accused them is fined 🪙{TRIBUNAL.innocentFine}.
       </p>
-      <div className="pick-grid" style={{ marginTop: 12 }}>
-        {G.roster
-          .filter((p) => p.id !== playerID)
-          .map((p) => {
-            const count = Object.values(G.votes).filter((v) => v === p.id).length;
-            const rev = G.revealed[p.id];
-            return (
-              <div
-                key={p.id}
-                className={`pickable ${myVote === p.id ? 'on' : ''}`}
-                style={{ opacity: rev ? 0.5 : 1, cursor: rev ? 'default' : 'pointer' }}
-                onClick={() => !rev && moves.vote(myVote === p.id ? null : p.id)}
-              >
-                <Avatar name={p.name} size={46} />
-                <small>{p.name}</small>
-                {rev ? (
-                  <small>{nationIcon(G, rev.nation)} exposed</small>
-                ) : (
-                  <span className="vote-dots">
-                    {Array.from({ length: majority }, (_, i) => (
-                      <i key={i} className={i < count ? '' : 'empty'} />
-                    ))}
-                  </span>
-                )}
-              </div>
-            );
-          })}
+
+      <div className="step">
+        🏛️ In session: {entrants.length} of {TRIBUNAL.minEntrants} needed {convenes && '✓'}
       </div>
-      <p className="small muted" style={{ marginTop: 12 }}>{myVote ? 'Click your accused again to withdraw.' : 'You have not accused anyone.'}</p>
+      <div className="row">
+        {entrants.length === 0 && <span className="small muted">Nobody has entered yet.</span>}
+        {entrants.map((p) => (
+          <span key={p.id} className="row small">
+            <Avatar name={p.name} size={26} /> {p.name}
+          </span>
+        ))}
+      </div>
+      {!inside ? (
+        <button className="primary" style={{ marginTop: 12 }} disabled={me.gold < TRIBUNAL.entryGold} onClick={() => moves.enterTribunal()}>
+          Enter the Tribunal · 🪙{TRIBUNAL.entryGold}
+        </button>
+      ) : (
+        <>
+          <div className="step">
+            Accuse · 🪙{TRIBUNAL.voteGold} to vote{' '}
+            <span className="muted small">{convenes ? `(${majority} of ${entrants.length} entrants needed)` : '(waiting for more entrants)'}</span>
+          </div>
+          <div className="pick-grid">
+            {G.roster
+              .filter((p) => p.id !== playerID)
+              .map((p) => {
+                const count = entrants.filter((e) => G.votes[e.id] === p.id).length;
+                const rev = G.revealed[p.id];
+                const cantAfford = myVote == null && me.gold < TRIBUNAL.voteGold;
+                return (
+                  <div
+                    key={p.id}
+                    className={`pickable ${myVote === p.id ? 'on' : ''}`}
+                    style={{ opacity: rev || cantAfford ? 0.5 : 1, cursor: rev || cantAfford ? 'default' : 'pointer' }}
+                    onClick={() => !rev && !cantAfford && moves.vote(myVote === p.id ? null : p.id)}
+                  >
+                    <Avatar name={p.name} size={46} />
+                    <small>{p.name}</small>
+                    {rev ? (
+                      <small>{nationIcon(G, rev.nation)} exposed</small>
+                    ) : (
+                      <span className="vote-dots">
+                        {Array.from({ length: majority }, (_, i) => (
+                          <i key={i} className={i < count ? '' : 'empty'} />
+                        ))}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+          <p className="small muted" style={{ marginTop: 10 }}>
+            {myVote ? 'Click your accused again to withdraw (refunds the vote).' : 'You have not accused anyone.'}
+          </p>
+          {me.faction === 'trader' && (
+            <div className="item stack" style={{ marginTop: 12, background: '#2e2a1c', border: '1px solid var(--gold)' }}>
+              <b>🟡 Your secret veto</b>
+              <span className="small muted">
+                Strike down today's verdict, whoever it hits. Nobody can see it's armed; the news only says "a secret veto". Refunded if
+                there's no verdict.
+              </span>
+              <button className={me.veto ? 'good' : ''} disabled={!me.veto && me.gold < TRIBUNAL.vetoGold} onClick={() => moves.armVeto(!me.veto)}>
+                {me.veto ? '✓ Veto armed (click to disarm)' : `Arm veto · 🪙${TRIBUNAL.vetoGold}`}
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </Modal>
   );
 }
@@ -255,7 +298,7 @@ export function PlayersModal({ G, onClose }: { G: GState; onClose: () => void })
               <small>🃏 {G.handSizes[p.id] ?? 0} cards</small>
               {rev && (
                 <small>
-                  {nationIcon(G, rev.nation)} {FACTION_INFO[rev.faction].label}
+                  {nationIcon(G, rev.nation)} {rev.faction ? FACTION_INFO[rev.faction].label : 'faction secret'}
                 </small>
               )}
             </div>

@@ -27,11 +27,18 @@ export type NationId = (typeof NATIONS)[number]['id'];
 
 export type Faction = 'syndicate' | 'concord' | 'trader';
 
-export const TRADER_GOAL = 4;
+export const TRADER_GOAL = 7;
 /** The Tribunal opens on this round. */
 export const TRIBUNAL_FROM_ROUND = 3;
 /** Anyone the Tribunal exposes pays this on every trade, and earns less at the market. */
 export const TARIFF = { tradeGold: 5, saleCut: 0.25 };
+
+/**
+ * The Tribunal: players pay to enter; it convenes with at least `minEntrants`.
+ * Entrants pay to cast a vote, and a majority of entrants exposes the accused.
+ * Voters who expose an innocent are fined. The Free Trader may arm a secret veto.
+ */
+export const TRIBUNAL = { entryGold: 4, voteGold: 3, minEntrants: 3, innocentFine: 8, vetoGold: 10 };
 
 export const FACTION_INFO: Record<Faction, { label: string; goal: string }> = {
   syndicate: {
@@ -44,7 +51,7 @@ export const FACTION_INFO: Record<Faction, { label: string; goal: string }> = {
   },
   trader: {
     label: 'Free Trader',
-    goal: `Win on your own by having at least ${TRADER_GOAL} goods flowing through your trade routes.`,
+    goal: `Build a trade empire: have at least ${TRADER_GOAL} goods flowing through your trade routes at the end. You can secretly veto the Tribunal. Grow too fast and you'll look like the Syndicate.`,
   },
 };
 
@@ -94,7 +101,10 @@ export const PUMP = { gold: 6, units: 4 };
 
 /** Trade route limits. */
 export const MAX_GOODS_PER_ROUTE = 2;
-export const MAX_ROUTES_PER_CITY = 3;
+export const MAX_ROUTES_PER_CITY = 4;
+
+/** Envoys and trade routes to far-away cities cost extra gold: this much per hex beyond `freeHexes`. */
+export const DISTANCE = { freeHexes: 2, goldPerHex: 2 };
 
 /** Bot behaviour per night. */
 export const BOT = { envoyChance: 0.45, routeChance: 0.35, acceptChance: 0.6 };

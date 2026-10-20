@@ -18,9 +18,9 @@ Day actions are signed with your name. Night actions are reported by city only. 
 |---|---|---|---|
 | 🔴 **The Syndicate** | 1 (2 with 6+ players) | Every Syndicate member's city | Any Syndicate member is still unexposed at the end of round 6 |
 | 🔵 **Concord** | Everyone else | Nothing, or one trusted partner (5+ players) | Every Syndicate member has been exposed at the Tribunal |
-| 🟡 **Free Trader** | 1 (4+ players) | Nothing | 4+ goods flowing through their trade routes at the end; wins alongside whoever else wins |
+| 🟡 **Free Trader** | 1 (4+ players) | Nothing | **7+ goods** flowing through their trade routes at the end (of a possible 8); wins alongside whoever else wins. Has a secret Tribunal veto |
 
-The Syndicate alone can use the 🕶️ black market. Unruled **bot cities** fill out the map so small groups still have plenty to work out:
+The Syndicate alone can use the 🕶️ black market. The Free Trader's goal needs a near-maxed trade network, which is expensive and conspicuous: build too fast and you look like the Syndicate. Unruled **bot cities** fill out the map so small groups still have plenty to work out:
 
 | Players | Syndicate | Concord | Trader | Cities on map | Concord pairs |
 |---|---|---|---|---|---|
@@ -37,16 +37,17 @@ The Syndicate alone can use the 🕶️ black market. Unruled **bot cities** fil
 2. **☀️ Day (public, signed with your name).** Talk on Discord.
    - **🔁 Trade** cards with other players. Every completed trade is in the public record.
    - **💰 Sell** cards at the market for gold. Every sale is public, including how much it earned.
-   - **⚖️ Tribunal** (from round 3): if a majority accuses the same player by dusk, their city and faction are revealed.
+   - **⚖️ Tribunal** (from round 3): see below.
 3. **🌙 Night (secret, by city).**
-   - **✉️ Envoy** (🌾 Grain + 🐑 Wool): ask another city for a connection. If they accept, they alone learn who sent it. Unanswered envoys expire after a day and a night.
-   - **🤝 Open trade** (🪵 Timber + 🪨 Stone): pick a good on an existing connection. From then on, whenever either city harvests it, the other gets 1 too.
+   - **✉️ Envoy** (🌾 Grain + 🐑 Wool, plus travel gold): ask another city for a connection. If they accept, they alone learn who sent it. Unanswered envoys expire after a day and a night.
+   - **🤝 Open trade** (🪵 Timber + 🪨 Stone, plus travel gold): pick a good on an existing connection. From then on, whenever either city harvests it, the other gets 1 too.
    - **🕵️ Spies** (12 gold): read one city's treasury for the round, meaning gold received from sales (and how many sales) and gold spent. No identities are revealed.
    - **🕶️ Black market (Syndicate only):** **Smuggle** one card for 1.5× its price, or **Pump** a resource's price for 6 gold.
 4. **📰 Morning news.** Every night action, listed by city in shuffled order, plus market moves. Everyone gets the newspaper.
 
-### Limits
-- Each city can have at most **3 connections**, and each connection at most **2 traded goods**.
+### Limits and distance
+- Each city can have at most **4 connections**, and each connection at most **2 traded goods**.
+- **Distance costs gold.** Envoys and trade routes cost 2 gold per hex between the two capitals beyond the first 2 hexes, up to about 8 gold across the map. Travel gold shows up in spy reports.
 - Everyone's **card count** (not which cards) is public. It updates at dawn and after public trades or sales, never mid-night.
 
 ## Money and markets
@@ -54,10 +55,19 @@ The Syndicate alone can use the 🕶️ black market. Unruled **bot cities** fil
 - **Prices move on relative supply and demand.** Supply is units harvested plus units sold. Demand is units spent on recipes, smuggled or pumped. Each resource is compared with the average of all seven, so only goods that are scarcer or more plentiful than the rest move. Prices don't all slide down just because every city harvests each morning. Moves are capped at 30% per night, and a price never falls below 2.
 - **Gold** starts at 15. It comes from sales and pays for spies, the black market and tariffs. It will also matter in War.
 
-## The Tribunal and tariffs
-- Exposing someone reveals their city and faction to everyone.
-- **Anyone exposed pays a tariff from then on:** 5 gold on every trade they're part of, and 25% less from market sales. An innocent exposure no longer ends the game; it handicaps that player instead.
-- Exposing every Syndicate member wins the game for the Concord immediately.
+## The Tribunal (from round 3)
+
+| Step | Rule |
+|---|---|
+| Enter | Pay 4 gold to join today's Tribunal, or abstain |
+| Convene | It sits at dusk only if **3+ players** entered; otherwise every fee is refunded |
+| Vote | Only entrants vote. Casting a vote costs 3 gold (switching is free; withdrawing refunds it). Anyone can be accused, entrant or not |
+| Verdict | A **majority of entrants** exposes the accused: their city is revealed, and they pay a 🚫 **tariff** from then on (5 gold per trade, 25% less from sales) |
+| Innocent exposed | Everyone who voted for them is fined **8 gold** |
+| 🟡 Veto | The Free Trader, if inside, can secretly arm a veto (10 gold, refunded if there's no verdict). It strikes the verdict down; the news says only "a secret veto" |
+| Host setting | By default an exposure also reveals the **faction**. The host can switch that off when creating the room, like Among Us's anonymous ejects |
+
+Exposing every Syndicate member wins the game for the Concord immediately. All Tribunal fees and fines appear in spy reports.
 
 ## How identity gets worked out
 1. **Recipes force public trading.** Most cities lack 🌾 + 🐑 or 🪵 + 🪨, so whoever traded for Grain and Wool today probably sent tonight's envoy.
@@ -77,13 +87,15 @@ The Syndicate alone can use the 🕶️ black market. Unruled **bot cities** fil
 - Hosting: static site on GitHub Pages plus peer-to-peer (the host's browser runs the game). No server.
 
 ## Known issues
-- **The Tribunal can be brute-forced.** With no penalty beyond a tariff, the table can accuse a different player each day from round 3. With 4 players and 1 Syndicate member, that's 3 suspects over 4 Tribunal days. Options: cap exposures per game, open the Tribunal every other day, or make an innocent exposure cost the accusers too.
+- **Watch whether the Tribunal is still brute-forceable.** Entry fees, vote costs and 8-gold fines for wrong accusations make guessing expensive, but a rich table might still cycle through suspects. Tune `TRIBUNAL` in constants.ts after playtests.
+- **The Free Trader's veto is costly early on.** After entering and voting, a Free Trader on starting gold can't afford the 10-gold veto; they need to sell cards first.
 - **The Syndicate is passive until War.** It wins by staying hidden.
 
 ## Roadmap
 - [x] **M1: Diplomacy loop.** Map, harvest, trade, market, envoys, routes, news, Tribunal, bots, P2P rooms
 - [x] **M1.5: Economy.** Recipes, black market, route caps, card counts, sound cues, quit to home
 - [x] **M1.6:** Relative pricing, whole-number gold, treasury spies, the Syndicate, tariffs, player names, map panning
+- [x] **M1.7:** Distance costs, Free Trader rework (7 goods, veto), paid Tribunal with fines, host setting for anonymous exposure
 - [ ] **M2: Arms and War.** Weapons need ⛏️ Ore + 🔥 Coal **and gold** (money pays for armies); forts need stone and timber; attacks are dice plus weapons vs forts plus secret ally support. Hoarding war materials is a tell. The Syndicate's active win becomes conquest.
 - [ ] **M3: Nobody sits out.** A conquered player becomes a *Government in Exile*: still wins with their faction, still votes, and can sabotage occupiers.
 - [ ] Phase timers, host reconnect and saved state.

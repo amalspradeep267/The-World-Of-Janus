@@ -1,12 +1,12 @@
 import { Client } from 'boardgame.io/client';
 import { Local } from 'boardgame.io/multiplayer';
 import { describe, expect, it } from 'vitest';
-import { COST, MAX_GOODS_PER_ROUTE, MAX_ROUNDS, MAX_ROUTES_PER_CITY, PUMP, RECIPE, RESOURCES, SETUP_TABLE, TARIFF, type Resource } from './constants';
-import { findRoute, handTotal, hasGoods, makeGame, routeCount, smugglePrice } from './game';
+import { COST, DISTANCE, MAX_GOODS_PER_ROUTE, MAX_ROUNDS, MAX_ROUTES_PER_CITY, PUMP, RECIPE, RESOURCES, SETUP_TABLE, TARIFF, TRIBUNAL, type Resource } from './constants';
+import { cityDistance, distanceGold, findRoute, handTotal, hasGoods, makeGame, routeCount, smugglePrice } from './game';
 import type { GState, Hand } from './types';
 
-function startMatch(n: number, id = `m${n}-${Math.random()}`) {
-  const game = makeGame(Array.from({ length: n }, (_, i) => `P${i}`));
+function startMatch(n: number, id = `m${n}-${Math.random()}`, revealFaction = true) {
+  const game = makeGame(Array.from({ length: n }, (_, i) => `P${i}`), { revealFaction });
   const multiplayer = Local();
   const clients = Array.from({ length: n }, (_, i) =>
     Client({ game, numPlayers: n, playerID: String(i), multiplayer, matchID: id }),
@@ -49,7 +49,10 @@ describe('The World of Janus', () => {
             const spare = RESOURCES.find((r) => p.hand[r] > 1);
             if (need && spare) c.moves.proposeTrade(String((i + 1) % n), { [spare]: 1 }, { [need]: 1 });
             for (const t of view(c).trades) if (t.to === String(i) && t.status === 'open') c.moves.respondTrade(t.id, true);
-            if (view(c).round >= 3) c.moves.vote(String((i + 1) % n));
+            if (view(c).round >= 3) {
+              c.moves.enterTribunal();
+              c.moves.vote(String((i + 1) % n));
+            }
           } else {
             const target = G.nationOrder.find((x) => x !== p.nation && !findRoute(G, p.nation, x));
             if (target && hasGoods(p.hand, RECIPE.envoy)) c.moves.planEnvoy(target);
@@ -166,7 +169,11 @@ describe('The World of Janus', () => {
     const innocent = factions.findIndex((f) => f !== 'syndicate');
     for (let k = 0; k < 4; k++) allReady(clients); // reach day 3, when the Tribunal opens
     expect(view(clients[0]).round).toBe(3);
-    clients.forEach((c, i) => i !== innocent && c.moves.vote(String(innocent)));
+    clients.forEach((c, i) => {
+      if (i === innocent) return;
+      c.moves.enterTribunal();
+      c.moves.vote(String(innocent));
+    });
     allReady(clients); // dusk: verdict
     expect(view(clients[0]).tariffed[String(innocent)]).toBe(true);
     expect(clients[0].getState()!.ctx.gameover).toBeFalsy();
@@ -218,5 +225,125 @@ describe('The World of Janus', () => {
       return;
     }
     throw new Error('no match produced an affordable envoy');
+  });
+
+  // ---------- distance ----------
+
+  it('charges more gold for envoys to far-away cities', () => {
+    const clients = startMatch(4);
+    allReady(clients); // -> night 1
+    for (let i = 0; i < 4; i++) {
+      const G = view(clients[i]);
+      const p = G.players[String(i)];
+      if (!hasGoods(p.hand, RECIPE.envoy)) continue;
+      // Pick the farthest city to make the surcharge visible.
+      const far = [...G.nationOrder].filter((n) => n !== p.nation).sort((a, b) => cityDistance(G, p.nation, b) - cityDistance(G, p.nation, a))[0];
+      const extra = distanceGold(G, p.nation, far);
+      expect(extra).toBe(Math.max(0, cityDistance(G, p.nation, far) - DISTANCE.freeHexes) * DISTANCE.goldPerHex);
+      clients[i].moves.planEnvoy(far);
+      expect(view(clients[i]).players[String(i)].gold).toBe(p.gold - extra);
+      clients[i].moves.cancelPlan(0);
+      expect(view(clients[i]).players[String(i)].gold).toBe(p.gold); // refunded
+      return;
+    }
+  });
+
+  // ---------- tribunal ----------
+
+  /** Start a match and advance to day 3, when the Tribunal opens. */
+  function toTribunal(n: number, revealFaction = true) {
+    const clients = startMatch(n, undefined, revealFaction);
+    for (let k = 0; k < 4; k++) allReady(clients);
+    expect(view(clients[0]).round).toBe(3);
+    const factions = clients.map((c, i) => view(c).players[String(i)].faction);
+    return { clients, factions };
+  }
+  const gold = (c: C, i: number) => view(c).players[String(i)].gold;
+
+  it('does not sit with fewer than three entrants, and refunds them', () => {
+    const { clients } = toTribunal(4);
+    const g0 = gold(clients[0], 0);
+    clients[0].moves.enterTribunal();
+    clients[1].moves.enterTribunal();
+    expect(gold(clients[0], 0)).toBe(g0 - TRIBUNAL.entryGold);
+    clients[0].moves.vote('1');
+    clients[1].moves.vote('0');
+    allReady(clients); // dusk
+    const G = view(clients[0]);
+    expect(G.verdicts.at(-1)!.convened).toBe(false);
+    expect(Object.keys(G.revealed)).toHaveLength(0);
+    expect(gold(clients[0], 0)).toBe(g0);
+  });
+
+  it('only lets entrants vote, and a majority of entrants decides', () => {
+    const { clients, factions } = toTribunal(5);
+    const target = factions.findIndex((f) => f !== 'syndicate');
+    const voters = [0, 1, 2, 3, 4].filter((i) => i !== target).slice(0, 3);
+    clients[target].moves.vote(String(voters[0])); // not an entrant: ignored
+    expect(view(clients[0]).votes[String(target)]).toBeUndefined();
+    // 3 entrants, 2 accuse: a majority of entrants even though 2 of 5 players is not a majority of the table.
+    for (const i of voters) clients[i].moves.enterTribunal();
+    clients[voters[0]].moves.vote(String(target));
+    clients[voters[1]].moves.vote(String(target));
+    allReady(clients);
+    const G = view(clients[0]);
+    const v = G.verdicts.at(-1)!;
+    if (v.vetoed) return; // the Free Trader may have been an entrant with a veto (not armed here, so this shouldn't happen)
+    expect(v.target).toBe(String(target));
+    expect(G.revealed[String(target)]).toBeTruthy();
+  });
+
+  it('fines the voters who expose an innocent', () => {
+    const { clients, factions } = toTribunal(4);
+    const innocent = factions.findIndex((f) => f !== 'syndicate');
+    const voters = [0, 1, 2, 3].filter((i) => i !== innocent);
+    const before = voters.map((i) => gold(clients[i], i));
+    for (const i of voters) {
+      clients[i].moves.enterTribunal();
+      clients[i].moves.vote(String(innocent));
+    }
+    allReady(clients);
+    const v = view(clients[0]).verdicts.at(-1)!;
+    expect(v.target).toBe(String(innocent));
+    expect([...v.fined].sort()).toEqual(voters.map(String).sort());
+    voters.forEach((i, k) => expect(gold(clients[i], i)).toBe(before[k] - TRIBUNAL.entryGold - TRIBUNAL.voteGold - TRIBUNAL.innocentFine));
+  });
+
+  it("lets the Free Trader's secret veto strike a verdict down", () => {
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const { clients, factions } = toTribunal(4);
+      const trader = factions.indexOf('trader');
+      const target = factions.findIndex((f, i) => i !== trader && f !== 'trader');
+      const others = [0, 1, 2, 3].filter((i) => i !== target);
+      if (!others.includes(trader)) continue;
+      for (const i of others) clients[i].moves.enterTribunal();
+      // The two other entrants form a majority; the Free Trader keeps their gold for the veto.
+      for (const i of others) if (i !== trader) clients[i].moves.vote(String(target));
+      const g = gold(clients[trader], trader);
+      clients[trader].moves.armVeto(true);
+      expect(gold(clients[trader], trader)).toBe(g - TRIBUNAL.vetoGold);
+      // Nobody else can see that a veto is armed.
+      const other = others.find((i) => i !== trader)!;
+      expect(view(clients[other]).players[String(trader)]).toBeUndefined();
+      allReady(clients);
+      const v = view(clients[0]).verdicts.at(-1)!;
+      expect(v.vetoed).toBe(true);
+      expect(view(clients[0]).revealed[String(target)]).toBeUndefined();
+      return;
+    }
+    throw new Error('no suitable seating found');
+  });
+
+  it('can keep exposed factions secret when the host chooses', () => {
+    const { clients, factions } = toTribunal(4, false);
+    const target = factions.findIndex((f) => f !== 'syndicate');
+    for (const i of [0, 1, 2, 3].filter((x) => x !== target)) {
+      clients[i].moves.enterTribunal();
+      clients[i].moves.vote(String(target));
+    }
+    allReady(clients);
+    const rev = view(clients[0]).revealed[String(target)];
+    expect(rev.nation).toBeTruthy();
+    expect(rev.faction).toBeNull();
   });
 });
