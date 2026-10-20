@@ -50,6 +50,36 @@ function Headline({ G, item }: { G: GState; item: NewsItem }) {
           </span>
         </div>
       );
+    case 'kidnap':
+      return (
+        <div className="headline">
+          <span className="who">
+            <span className="nat">🗡️</span>
+            <span className="verb">➜</span>
+            <Nat G={G} n={item.nation} />
+          </span>
+          <span className="cap">
+            Ruler kidnapped!
+            <em>Whoever rules {nationName(G, item.nation)} is now paying ransom to the Syndicate</em>
+          </span>
+        </div>
+      );
+    case 'botched':
+      return (
+        <div className="headline botched">
+          <span className="who">
+            <Avatar name={playerOf(G, item.kidnapper).name} size={44} />
+            <span className="verb">🗡️❌</span>
+            <Nat G={G} n={item.target} />
+          </span>
+          <span className="cap">
+            Botched kidnapping exposes {playerOf(G, item.kidnapper).name}!
+            <em>
+              They rule {nationName(G, item.nation)} and belong to the Syndicate
+            </em>
+          </span>
+        </div>
+      );
     case 'quiet':
       return (
         <div className="headline">
@@ -70,7 +100,10 @@ export function MorningPaper({ G, me, onClose }: { G: GState; me: PlayerSecret; 
   const edition = G.news[G.news.length - 1];
   const headlines = edition.items.filter((i) => i.t !== 'market');
   const market = edition.items.find((i) => i.t === 'market') as Extract<NewsItem, { t: 'market' }> | undefined;
-  const dispatches = me.inbox.filter((m) => m.round === edition.round && !m.text.startsWith('Harvest'));
+  // Last night's reports, plus this dawn's ransom notes (paid or collected).
+  const dispatches = me.inbox.filter(
+    (m) => !m.text.startsWith('Harvest') && (m.round === edition.round || (m.round === G.round && /^(⛓️|🗡️|🕊️)/u.test(m.text))),
+  );
   const land = me.harvest.land;
   const routes = me.harvest.routes;
   const gained = RESOURCES.filter((r) => land[r] + routes[r] > 0);

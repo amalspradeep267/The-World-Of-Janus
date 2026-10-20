@@ -47,7 +47,7 @@ export const TRIBUNAL = { entryGold: 4, minEntrants: 3, innocentFine: 8, vetoGol
 export const FACTION_INFO: Record<Faction, { label: string; goal: string }> = {
   syndicate: {
     label: 'The Syndicate',
-    goal: 'Stay hidden. You win if any Syndicate member is still unexposed at the end. Only you can use the black market.',
+    goal: 'Stay hidden. You win if any Syndicate member is still unexposed at the end. Only you can use the black market and kidnap rulers for ransom.',
   },
   concord: {
     label: 'Concord',
@@ -102,6 +102,13 @@ export const COST = { spyGold: 12 };
 export const SMUGGLE_MARKUP = 1.5;
 /** Black market (night, Syndicate only): pay this much gold to fake this many units of demand. */
 export const PUMP = { gold: 6, units: 4 };
+
+/**
+ * 🗡️ Kidnapping (night, Syndicate only): name a city and the player you think rules it.
+ * Right: that player pays you `ransom` gold every dawn, without learning who you are.
+ * Wrong: you are exposed in the morning newspaper.
+ */
+export const KIDNAP = { gold: 15, ransom: 5 };
 
 /** Trade route limits. */
 export const MAX_GOODS_PER_ROUTE = 2;

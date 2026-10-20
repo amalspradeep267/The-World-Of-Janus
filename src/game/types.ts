@@ -44,7 +44,8 @@ export type NightPlan =
   | { kind: 'route'; with: NationId; good: Resource; paid: Partial<Hand>; gold: number }
   | { kind: 'spy'; nation: NationId; gold: number }
   | { kind: 'smuggle'; good: Resource; gold: number }
-  | { kind: 'pump'; good: Resource; gold: number };
+  | { kind: 'pump'; good: Resource; gold: number }
+  | { kind: 'kidnap'; nation: NationId; suspect: PlayerID; gold: number };
 
 export interface PlayerSecret {
   nation: NationId;
@@ -61,6 +62,10 @@ export interface PlayerSecret {
   freeTrader: boolean;
   /** Free Traders only: gold set aside for a veto today (0 = not armed). Secret. */
   veto: number;
+  /** Held for ransom by a (to them unknown) kidnapper. */
+  captive: boolean;
+  /** Syndicate: the players this one holds for ransom, and their cities. */
+  hostages: { victim: PlayerID; nation: NationId }[];
 }
 
 export interface Trade {
@@ -81,6 +86,8 @@ export interface RosterEntry {
 export interface Ledger {
   received: number;
   sales: number;
+  /** Gold from anywhere other than market sales (ransoms). */
+  other: number;
   spent: number;
 }
 
@@ -91,6 +98,8 @@ export type NewsItem =
   | { t: 'accepted' | 'declined' | 'expired'; from: NationId; to: NationId }
   | { t: 'route'; a: NationId; b: NationId; good: Resource }
   | { t: 'spy'; nation: NationId }
+  | { t: 'kidnap'; nation: NationId }
+  | { t: 'botched'; kidnapper: PlayerID; nation: NationId; target: NationId }
   | { t: 'quiet' }
   | { t: 'market'; changes: Partial<Record<Resource, number>> };
 
@@ -154,4 +163,6 @@ export interface GState {
   owners: Partial<Record<NationId, Controller>>;
   players: Record<PlayerID, PlayerSecret>;
   ledgers: Record<PlayerID, Ledger>;
+  /** Active kidnappings. Secret: victims know they're held, but not by whom. */
+  kidnaps: { kidnapper: PlayerID; victim: PlayerID }[];
 }

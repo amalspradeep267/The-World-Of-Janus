@@ -30,6 +30,7 @@ import {
   START_GOLD,
   START_PRICE,
   FREE_TRADER_ROUTES,
+  KIDNAP,
   TRIBUNAL,
   TRIBUNAL_FROM_ROUND,
   type Faction,
@@ -109,7 +110,7 @@ function addSupply(G: GState, r: Resource, n: number) {
   G.supply[r] = (G.supply[r] ?? 0) + n;
 }
 
-const freshLedger = () => ({ received: 0, sales: 0, spent: 0 });
+const freshLedger = () => ({ received: 0, sales: 0, other: 0, spent: 0 });
 
 /** What a sale of `qty` pays this player, after any Tribunal tariff. */
 export const saleValue = (G: GState, pid: PlayerID, r: Resource, qty: number) =>
@@ -137,6 +138,7 @@ function startDay({ G, random }: { G: GState; random: Rng & { Die(sides: number)
   G.ready = {};
   G.trades = [];
   for (const pid of humans(G)) G.ledgers[pid] = freshLedger();
+  collectRansoms(G);
 
   G.rolls = Array.from({ length: HARVEST_ROLLS }, () => random.Die(DIE_SIDES));
 
@@ -171,6 +173,35 @@ function startDay({ G, random }: { G: GState; random: Rng & { Die(sides: number)
     p.inbox.push({ round: G.round, text: `Harvest: ${formatGoods(g)}.${routePart}` });
   }
   snapshotHands(G);
+}
+
+/** Each dawn, every captive pays their kidnapper; exposed kidnappers lose their hostages. */
+function collectRansoms(G: GState) {
+  for (const k of [...G.kidnaps]) {
+    const victim = G.players[k.victim];
+    const kidnapper = G.players[k.kidnapper];
+    if (G.revealed[k.kidnapper]) {
+      release(G, k.kidnapper);
+      continue;
+    }
+    const pay = Math.min(KIDNAP.ransom, victim.gold);
+    victim.gold -= pay;
+    G.ledgers[k.victim].spent += pay;
+    kidnapper.gold += pay;
+    G.ledgers[k.kidnapper].other += pay;
+    victim.inbox.push({ round: G.round, text: `⛓️ You paid ${pay} gold in ransom to your unknown kidnapper.` });
+    kidnapper.inbox.push({ round: G.round, text: `🗡️ ${nameOf(G, k.victim)} paid you ${pay} gold in ransom.` });
+  }
+}
+
+/** Free everyone a kidnapper holds (when the kidnapper has been exposed). */
+function release(G: GState, kidnapper: PlayerID) {
+  for (const k of G.kidnaps.filter((x) => x.kidnapper === kidnapper)) {
+    G.players[k.victim].captive = false;
+    G.players[k.victim].inbox.push({ round: G.round, text: '🕊️ Your kidnapper has been exposed. You are free; no more ransom.' });
+  }
+  G.kidnaps = G.kidnaps.filter((x) => x.kidnapper !== kidnapper);
+  G.players[kidnapper].hostages = [];
 }
 
 function endDay({ G }: { G: GState }) {
@@ -263,6 +294,7 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
     for (const plan of G.players[pid].plans) if ('gold' in plan) G.ledgers[pid].spent += plan.gold;
   }
   const spyOrders: { pid: PlayerID; nation: NationId }[] = [];
+  const kidnapOrders: { pid: PlayerID; nation: NationId; suspect: PlayerID; gold: number }[] = [];
 
   // Player actions, in shuffled order so the news order leaks nothing.
   for (const pid of random.Shuffle(humans(G))) {
@@ -294,6 +326,8 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
       } else if (plan.kind === 'pump') {
         addDemand(G, plan.good, PUMP.units);
         p.inbox.push({ round: G.round, text: `🕶️ Your agents bid up ${RESOURCE_INFO[plan.good].emoji} ${RESOURCE_INFO[plan.good].label}.` });
+      } else if (plan.kind === 'kidnap') {
+        kidnapOrders.push({ pid, nation: plan.nation, suspect: plan.suspect, gold: plan.gold });
       } else {
         spyOrders.push({ pid, nation: plan.nation });
         items.push({ t: 'spy', nation: plan.nation });
@@ -303,15 +337,50 @@ function resolveNight({ G, random }: { G: GState; random: Rng }) {
     p.plans = [];
   }
 
+  for (const order of kidnapOrders) {
+    const k = G.players[order.pid];
+    const right = G.owners[order.nation] === order.suspect;
+    if (right) {
+      const victim = G.players[order.suspect];
+      if (victim.captive) {
+        unspend(G, order.pid, order.gold);
+        k.inbox.push({ round: G.round, text: `🗡️ ${nameOf(G, order.suspect)} is already being held. Your gold was returned.` });
+        continue;
+      }
+      victim.captive = true;
+      G.kidnaps.push({ kidnapper: order.pid, victim: order.suspect });
+      k.hostages.push({ victim: order.suspect, nation: order.nation });
+      k.known[order.nation] = order.suspect;
+      victim.inbox.push({
+        round: G.round,
+        text: `⛓️ Kidnappers seized you in ${icon(G, order.nation)}. You'll pay ${KIDNAP.ransom} gold every dawn to a Syndicate member you can't name, until they're exposed.`,
+      });
+      k.inbox.push({ round: G.round, text: `🗡️ Success: you hold ${nameOf(G, order.suspect)} of ${icon(G, order.nation)} for ransom.` });
+      items.push({ t: 'kidnap', nation: order.nation });
+    } else {
+      // A botched kidnapping exposes the kidnapper to everyone.
+      G.revealed[order.pid] = { nation: k.nation, faction: 'syndicate' };
+      G.tariffed[order.pid] = true;
+      release(G, order.pid);
+      items.push({ t: 'botched', kidnapper: order.pid, nation: k.nation, target: order.nation });
+      G.publicLog.push({
+        round: G.round,
+        text: `🗡️ A botched kidnapping in ${icon(G, order.nation)} exposed ${nameOf(G, order.pid)}: they rule ${icon(G, k.nation)} and belong to the Syndicate.`,
+      });
+      const left = humans(G).filter((pid) => G.players[pid].faction === 'syndicate' && !G.revealed[pid]);
+      if (left.length === 0 && !G.result) G.result = finalResult(['concord'], 'Every Syndicate member was exposed. The Concord wins.');
+    }
+  }
+
   for (const { pid, nation } of spyOrders) {
     const owner = G.owners[nation]!;
     const l = owner === 'bot' ? freshLedger() : G.ledgers[owner];
     G.players[pid].inbox.push({
       round: G.round,
       text:
-        l.received === 0 && l.spent === 0
+        l.received === 0 && l.spent === 0 && l.other === 0
           ? `🕵️ Spies in ${icon(G, nation)}: its treasury didn't move this round.`
-          : `🕵️ Spies in ${icon(G, nation)}: received ${l.received} gold from ${l.sales} sale${l.sales === 1 ? '' : 's'}, and spent ${l.spent} gold.`,
+          : `🕵️ Spies in ${icon(G, nation)}: received ${l.received} gold from ${l.sales} sale${l.sales === 1 ? '' : 's'}${l.other ? ` and ${l.other} gold from elsewhere` : ''}, and spent ${l.spent} gold.`,
     });
   }
 
@@ -572,6 +641,16 @@ const planSpy = hostOnly(({ G, playerID }, nation: NationId) => {
 
 const isSyndicate = (p: PlayerSecret | undefined) => p?.faction === 'syndicate';
 
+/** Syndicate only: send kidnappers to a city, naming the player you think rules it. */
+const planKidnap = hostOnly(({ G, playerID }, nation: NationId, suspect: PlayerID) => {
+  const p = me(G, playerID);
+  if (!p || !isSyndicate(p) || !G.nations[nation] || nation === p.nation) return INVALID_MOVE;
+  if (!G.players[suspect] || suspect === playerID || G.players[suspect].faction === 'syndicate') return INVALID_MOVE;
+  if (p.plans.some((x) => x.kind === 'kidnap') || p.gold < KIDNAP.gold) return INVALID_MOVE;
+  p.gold -= KIDNAP.gold;
+  p.plans.push({ kind: 'kidnap', nation, suspect, gold: KIDNAP.gold });
+});
+
 const planSmuggle = hostOnly(({ G, playerID }, good: Resource) => {
   const p = me(G, playerID);
   if (!p || !isSyndicate(p) || !RESOURCES.includes(good)) return INVALID_MOVE;
@@ -645,6 +724,8 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
           harvest: { land: emptyHand(), routes: emptyHand() },
           freeTrader: false,
           veto: 0,
+          captive: false,
+          hostages: [],
         };
       });
 
@@ -705,6 +786,7 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
         owners,
         players,
         ledgers: Object.fromEntries(ids.map((id) => [id, freshLedger()])),
+        kidnaps: [],
       };
     },
 
@@ -724,7 +806,7 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
         onEnd: resolveNight as any,
         endIf: allReady,
         turn: { activePlayers: ActivePlayers.ALL },
-        moves: { setReady, respondEnvoy, planEnvoy, planRoute, planSpy, planSmuggle, planPump, cancelPlan },
+        moves: { setReady, respondEnvoy, planEnvoy, planRoute, planSpy, planSmuggle, planPump, planKidnap, cancelPlan },
       },
     },
 
@@ -737,7 +819,7 @@ export function makeGame(names: string[], settings: Settings = { revealFaction: 
       const owners: GState['owners'] = {};
       if (mine) Object.assign(owners, mine.known);
       for (const [pid, rev] of Object.entries(G.revealed)) owners[rev.nation] = pid;
-      return { ...G, owners, players: mine ? { [playerID!]: mine } : {}, ledgers: {} };
+      return { ...G, owners, players: mine ? { [playerID!]: mine } : {}, ledgers: {}, kidnaps: [] };
     },
   };
 }

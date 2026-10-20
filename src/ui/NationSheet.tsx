@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   COST,
   FACTION_INFO,
+  KIDNAP,
   MAX_GOODS_PER_ROUTE,
   MAX_ROUTES_PER_CITY,
   RECIPE,
@@ -23,9 +24,9 @@ interface Props {
   onClose: () => void;
 }
 
-type Mode = null | 'trade';
+type Mode = null | 'trade' | 'kidnap';
 
-export function NationSheet({ G, phase, me, nation, moves, onClose }: Props) {
+export function NationSheet({ G, phase, me, playerID, nation, moves, onClose }: Props) {
   const [mode, setMode] = useState<Mode>(null);
   useEffect(() => setMode(null), [nation, phase]);
 
@@ -40,6 +41,9 @@ export function NationSheet({ G, phase, me, nation, moves, onClose }: Props) {
   const plannedEnvoys = me.plans.filter((p) => p.kind === 'envoy').length;
   const atRouteCap = routeCount(G, me.nation) + plannedEnvoys >= MAX_ROUTES_PER_CITY;
   const canSmuggle = me.faction === 'syndicate';
+  const kidnapPlanned = me.plans.find((p) => p.kind === 'kidnap');
+  // Syndicate members know each other's cities; they can't kidnap their own.
+  const teammates = Object.values(me.known).filter((who): who is string => who !== 'bot' && who !== playerID);
   const hexes = cityDistance(G, me.nation, nation);
   const travel = distanceGold(G, me.nation, nation);
   const shortOfGold = me.gold < travel;
@@ -185,6 +189,49 @@ export function NationSheet({ G, phase, me, nation, moves, onClose }: Props) {
             </span>
             <span className="cost">🪙{COST.spyGold}</span>
           </button>
+
+          {me.faction === 'syndicate' && (
+            <>
+              <button
+                className={`action ${mode === 'kidnap' ? 'chosen' : ''}`}
+                disabled={!!kidnapPlanned || me.gold < KIDNAP.gold}
+                onClick={() => setMode(mode === 'kidnap' ? null : 'kidnap')}
+              >
+                <span className="ai">🗡️</span>
+                <span>
+                  <b>{kidnapPlanned ? 'Kidnappers sent tonight ✓' : 'Kidnap its ruler'}</b>
+                  <span>
+                    {me.gold < KIDNAP.gold && !kidnapPlanned
+                      ? `Needs ${KIDNAP.gold} gold.`
+                      : `Name the player who rules this city. Right: they pay you 🪙${KIDNAP.ransom} every dawn. Wrong: you're exposed in the newspaper.`}
+                  </span>
+                </span>
+                <span className="cost">🪙{KIDNAP.gold}</span>
+              </button>
+              {mode === 'kidnap' && (
+                <div className="stack" style={{ marginTop: 8 }}>
+                  <span className="small" style={{ color: 'var(--bad)' }}>⚠️ Who rules {n.name}? A wrong guess exposes you to everyone.</span>
+                  <div className="pick-grid">
+                    {G.roster
+                      .filter((p) => p.id !== playerID && !teammates.includes(p.id) && !G.revealed[p.id])
+                      .map((p) => (
+                        <div
+                          key={p.id}
+                          className="pickable"
+                          onClick={() => {
+                            moves.planKidnap(nation, p.id);
+                            setMode(null);
+                          }}
+                        >
+                          <Avatar name={p.name} />
+                          <small>{p.name}</small>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </>
       )}
     </div>

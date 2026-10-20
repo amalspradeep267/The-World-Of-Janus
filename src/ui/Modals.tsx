@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FACTION_INFO, FREE_TRADER_ROUTES, MAX_ROUNDS, PUMP, RECIPE, RESOURCES, RESOURCE_INFO, TRIBUNAL, TRIBUNAL_FROM_ROUND, type NationId, type Resource } from '../game/constants';
+import { FACTION_INFO, FREE_TRADER_ROUTES, KIDNAP, MAX_ROUNDS, PUMP, RECIPE, RESOURCES, RESOURCE_INFO, TRIBUNAL, TRIBUNAL_FROM_ROUND, type NationId, type Resource } from '../game/constants';
 import { handTotal, saleValue, smugglePrice, tradeRouteCount } from '../game/game';
 import type { GState, Hand, PlayerSecret } from '../game/types';
 import { Avatar, GoldCard, goodsEmoji, Modal, nationIcon, nationName, playerOf, Recipe, ResCard, ResPill } from './common';
@@ -32,18 +32,25 @@ export function TradeModal({ G, me, playerID, moves, onClose }: { G: GState; me:
         ))}
       </div>
 
-      <div className="step"><i>2</i> You give <span className="muted small">(click your cards)</span></div>
-      <div className="row">
-        {RESOURCES.filter((r) => me.hand[r] > 0).map((r) => (
-          <ResCard key={r} res={r} small count={give[r] || undefined} onClick={() => add(give, setGive, r, 1, me.hand[r])} ghosted={!give[r]} title={`You have ${me.hand[r]}`} />
+      <div className="step"><i>2</i> You give <span className="muted small">(click a card to add one; dimmed = you have none)</span></div>
+      <div className="row pick-cards">
+        {RESOURCES.map((r) => (
+          <PickCard
+            key={r}
+            res={r}
+            picked={give[r] ?? 0}
+            have={me.hand[r]}
+            onAdd={() => add(give, setGive, r, 1, me.hand[r])}
+            onRemove={() => add(give, setGive, r, -1)}
+          />
         ))}
         {handTotal(give) > 0 && <button className="tiny ghost" onClick={() => setGive({})}>clear</button>}
       </div>
 
       <div className="step"><i>3</i> You want</div>
-      <div className="row">
+      <div className="row pick-cards">
         {RESOURCES.map((r) => (
-          <ResCard key={r} res={r} small count={get[r] || undefined} onClick={() => add(get, setGet, r, 1)} ghosted={!get[r]} />
+          <PickCard key={r} res={r} picked={get[r] ?? 0} onAdd={() => add(get, setGet, r, 1)} onRemove={() => add(get, setGet, r, -1)} />
         ))}
         {handTotal(get) > 0 && <button className="tiny ghost" onClick={() => setGet({})}>clear</button>}
       </div>
@@ -79,6 +86,33 @@ export function TradeModal({ G, me, playerID, moves, onClose }: { G: GState; me:
         </>
       )}
     </Modal>
+  );
+}
+
+/** A card in the trade picker: bright if usable, dimmed only when you have none to give. */
+function PickCard({ res, picked, have, onAdd, onRemove }: { res: Resource; picked: number; have?: number; onAdd: () => void; onRemove: () => void }) {
+  const none = have === 0;
+  const full = have !== undefined && picked >= have;
+  return (
+    <div className={`pick-card ${picked ? 'picked' : ''}`}>
+      <ResCard
+        res={res}
+        small
+        count={picked || undefined}
+        ghosted={none}
+        onClick={none || full ? undefined : onAdd}
+        title={have === undefined ? `Ask for ${RESOURCE_INFO[res].label}` : none ? `You have no ${RESOURCE_INFO[res].label}` : `You have ${have}`}
+      />
+      <span className="pick-meta">
+        {picked > 0 ? (
+          <button className="tiny" onClick={onRemove} aria-label="Remove one">
+            −
+          </button>
+        ) : have !== undefined ? (
+          <span className={none ? 'muted' : ''}>have {have}</span>
+        ) : null}
+      </span>
+    </div>
   );
 }
 
@@ -263,6 +297,19 @@ export function IdentityModal({ G, me, onClose }: { G: GState; me: PlayerSecret;
           ))}
         </div>
       </div>
+      {me.captive && (
+        <p className="small" style={{ color: 'var(--bad)' }}>
+          ⛓️ You're being held for ransom by an unknown Syndicate member: you pay 🪙{KIDNAP.ransom} every dawn until they're exposed at the
+          Tribunal.
+        </p>
+      )}
+      {me.hostages.length > 0 && (
+        <p className="small">
+          🗡️ You hold for ransom:{' '}
+          {me.hostages.map((h) => `${playerOf(G, h.victim).name} (${nationIcon(G, h.nation)})`).join(', ')}, collecting 🪙{KIDNAP.ransom} each
+          every dawn.
+        </p>
+      )}
       <div className="step">🔍 What you know</div>
       {known.length === 0 && <p className="small muted">Nothing yet. Match public trades and sales to what cities do at night, compare spy reports with the sales record, or accept an envoy to learn who sent it.</p>}
       <div className="pick-grid">
@@ -356,6 +403,10 @@ export function NewsArchive({ G, onOpenLatest, onClose }: { G: GState; onOpenLat
                   return <span key={i} title="Trade opened">{nationIcon(G, it.a)}{RESOURCE_INFO[it.good].emoji}{nationIcon(G, it.b)}</span>;
                 case 'spy':
                   return <span key={i} title="Spies spotted">🕵️{nationIcon(G, it.nation)}</span>;
+                case 'kidnap':
+                  return <span key={i} title="Kidnapping">🗡️{nationIcon(G, it.nation)}</span>;
+                case 'botched':
+                  return <span key={i} title="Botched kidnapping: kidnapper exposed">❌🗡️{playerOf(G, it.kidnapper).name}</span>;
                 case 'prologue':
                   return <span key={i} className="small">{it.nations} cities, {it.players} ruled by players</span>;
                 case 'market':

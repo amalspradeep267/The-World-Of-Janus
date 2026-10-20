@@ -185,7 +185,10 @@ export function Board(props: BoardProps<GState>) {
           <span className="nicon">🎭</span>
           <span>
             <b>{playerOf(G, playerID!).name}</b>
-            <span>🔒 Click to see your secret{G.tariffed[playerID!] ? ' · 🚫 tariffed' : ''}</span>
+            <span>
+              🔒 Click to see your secret{G.tariffed[playerID!] ? ' · 🚫 tariffed' : ''}
+              {me.captive && <b style={{ color: 'var(--bad)', display: 'inline', fontFamily: 'var(--sans)' }}> · ⛓️ held for ransom</b>}
+            </span>
           </span>
         </div>
 
@@ -274,6 +277,7 @@ export function Board(props: BoardProps<GState>) {
               {p.kind === 'spy' && <>🕵️ Spy on {nationIcon(G, p.nation)}'s treasury</>}
               {p.kind === 'smuggle' && <>🕶️ Smuggle {RESOURCE_INFO[p.good].emoji}</>}
               {p.kind === 'pump' && <>🕶️ Pump {RESOURCE_INFO[p.good].emoji} ▲</>}
+              {p.kind === 'kidnap' && <>🗡️ Kidnap <Avatar name={playerOf(G, p.suspect).name} size={20} /> in {nationIcon(G, p.nation)}</>}
               <button className="tiny ghost" onClick={() => moves.cancelPlan(i)} title="Cancel and get your cards back">✕</button>
             </span>
           ))}

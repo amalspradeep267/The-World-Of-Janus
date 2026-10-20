@@ -1,7 +1,7 @@
 import { Client } from 'boardgame.io/client';
 import { Local } from 'boardgame.io/multiplayer';
 import { describe, expect, it } from 'vitest';
-import { COST, DISTANCE, MAX_GOODS_PER_ROUTE, MAX_ROUNDS, MAX_ROUTES_PER_CITY, PUMP, RECIPE, RESOURCES, SETUP_TABLE, TARIFF, TRIBUNAL, type Resource } from './constants';
+import { COST, DISTANCE, KIDNAP, MAX_GOODS_PER_ROUTE, MAX_ROUNDS, MAX_ROUTES_PER_CITY, PUMP, RECIPE, RESOURCES, SETUP_TABLE, TARIFF, TRIBUNAL, type Resource } from './constants';
 import { cityDistance, distanceGold, findRoute, handTotal, hasGoods, makeGame, routeCount, smugglePrice } from './game';
 import type { GState, Hand } from './types';
 
@@ -377,5 +377,56 @@ describe('The World of Janus', () => {
     const rev = view(clients[0]).revealed[String(target)];
     expect(rev.nation).toBeTruthy();
     expect(rev.faction).toBeNull();
+  });
+
+  // ---------- kidnapping ----------
+
+  function seats(clients: C[]) {
+    return clients.map((c, i) => view(c).players[String(i)]);
+  }
+
+  it('lets a Syndicate kidnapper collect ransom without revealing who they are', () => {
+    const clients = startMatch(4);
+    allReady(clients); // -> night 1
+    const ps = seats(clients);
+    const s = ps.findIndex((p) => p.faction === 'syndicate');
+    const v = ps.findIndex((p) => p.faction !== 'syndicate');
+    clients[s].moves.planKidnap(ps[v].nation, String(v));
+    expect(view(clients[s]).players[String(s)].gold).toBe(15 - KIDNAP.gold);
+    allReady(clients); // -> day 2: kidnap resolves, first ransom paid at dawn
+    const victim = view(clients[v]).players[String(v)];
+    expect(victim.captive).toBe(true);
+    expect(victim.gold).toBe(15 - KIDNAP.ransom);
+    expect(view(clients[s]).players[String(s)].gold).toBe(15 - KIDNAP.gold + KIDNAP.ransom);
+    expect(view(clients[v]).owners[ps[s].nation]).toBeUndefined(); // the victim doesn't learn who
+    expect(view(clients[v]).kidnaps).toEqual([]); // and can't read it from the state
+    expect(view(clients[0]).news.at(-1)!.items.some((i) => i.t === 'kidnap')).toBe(true);
+  });
+
+  it('exposes a kidnapper who guesses wrong', () => {
+    const clients = startMatch(4);
+    allReady(clients); // -> night 1
+    const ps = seats(clients);
+    const s = ps.findIndex((p) => p.faction === 'syndicate');
+    const v = ps.findIndex((p) => p.faction !== 'syndicate');
+    const wrongCity = view(clients[s]).nationOrder.find((n) => n !== ps[v].nation && n !== ps[s].nation)!;
+    clients[s].moves.planKidnap(wrongCity, String(v));
+    allReady(clients); // -> morning
+    const G = view(clients[v]);
+    expect(G.revealed[String(s)]).toEqual({ nation: ps[s].nation, faction: 'syndicate' });
+    expect(G.news.at(-1)!.items.some((i) => i.t === 'botched')).toBe(true);
+    expect(clients[0].getState()!.ctx.gameover).toBeTruthy(); // the only Syndicate member is exposed
+  });
+
+  it('only lets the Syndicate kidnap, and never its own members', () => {
+    const clients = startMatch(6);
+    allReady(clients); // -> night 1
+    const ps = seats(clients);
+    const [s1, s2] = ps.map((p, i) => (p.faction === 'syndicate' ? i : -1)).filter((i) => i >= 0);
+    const c = ps.findIndex((p) => p.faction === 'concord');
+    clients[c].moves.planKidnap(ps[s1].nation, String(s1));
+    expect(view(clients[c]).players[String(c)].plans).toHaveLength(0);
+    clients[s1].moves.planKidnap(ps[s2].nation, String(s2));
+    expect(view(clients[s1]).players[String(s1)].plans).toHaveLength(0);
   });
 });
